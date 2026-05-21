@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GOOGLE_GENAI_API_KEY;
