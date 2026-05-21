@@ -32,29 +32,31 @@ export default function Fixtures({
   const [data, setData] = useState<FSCData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
-  const [search, setSearch]               = useState('');
-  const [selectedClub, setSelectedClub]   = useState<FSCClub | null>(null);
-  const [selectedTeam, setSelectedTeam]   = useState<TeamEntry | null>(null);
-  const [savedTeam, setSavedTeam]         = useState(getSavedTeam);
+  const [search, setSearch]             = useState('');
+  const [selectedClub, setSelectedClub] = useState<FSCClub | null>(null);
+  const [savedTeam, setSavedTeam]       = useState(getSavedTeam);
+  // Pre-populate team from localStorage so the level starts at 'fixtures' as soon as data loads
+  const [selectedTeam, setSelectedTeam] = useState<TeamEntry | null>(() => {
+    const t = getSavedTeam();
+    return t ? { gradeKey: t.gradeKey, displayGrade: t.displayGrade, count: 0 } : null;
+  });
 
   const deferredSearch = useDeferredValue(search);
 
-  // Load JSON once
+  // Load JSON once; set club in the same callback to avoid a flash of the club list
   useEffect(() => {
+    const saved = getSavedTeam();
     loadFSCData()
-      .then(d => { setData(d); setDataLoading(false); })
+      .then(d => {
+        setData(d);
+        if (saved) {
+          const club = d.clubs.find(c => c.id === saved.clubId);
+          if (club) setSelectedClub(club);
+        }
+        setDataLoading(false);
+      })
       .catch(() => setDataLoading(false));
   }, []);
-
-  // Pre-select club/team from saved selection
-  useEffect(() => {
-    if (!data || !savedTeam) return;
-    const club = data.clubs.find(c => c.id === savedTeam.clubId);
-    if (club && !selectedClub) {
-      setSelectedClub(club);
-      setSelectedTeam({ gradeKey: savedTeam.gradeKey, displayGrade: savedTeam.displayGrade, count: 0 });
-    }
-  }, [data, savedTeam]);
 
   const handleSave = (club: FSCClub, team: TeamEntry) => {
     const t = { clubId: club.id, clubName: club.name, clubLogo: club.logo, gradeKey: team.gradeKey, displayGrade: team.displayGrade };
@@ -62,8 +64,13 @@ export default function Fixtures({
     setSavedTeam(t);
   };
 
-  // Back: fixture list → team list → club list → parent
+  // Back navigation: if viewing a saved team's fixtures, go straight to parent.
+  // Manual browsing (different club/team) still steps back through the levels.
   const handleBack = () => {
+    const isOnSavedTeam = savedTeam &&
+      selectedClub?.id === savedTeam.clubId &&
+      selectedTeam?.gradeKey === savedTeam.gradeKey;
+    if (isOnSavedTeam) { onBack(); return; }
     if (selectedTeam) { setSelectedTeam(null); return; }
     if (selectedClub) { setSelectedClub(null); setSearch(''); return; }
     onBack();
