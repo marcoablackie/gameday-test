@@ -209,12 +209,18 @@ export default function GamedayFlow() {
     } catch {}
   }, [effectiveProfile]);
 
-  // Sync team from Firestore to localStorage on new device login
+  // Sync team between Firestore and localStorage
   useEffect(() => {
-    if (!effectiveProfile?.myTeam) return;
-    if (getSavedTeam()) return; // local already set, don't overwrite
-    saveTeam(effectiveProfile.myTeam);
-  }, [effectiveProfile?.myTeam]);
+    if (!effectiveProfile) return;
+    const localTeam = getSavedTeam();
+    if (effectiveProfile.myTeam && !localTeam) {
+      // New device: pull team from Firestore into localStorage
+      saveTeam(effectiveProfile.myTeam);
+    } else if (!effectiveProfile.myTeam && localTeam) {
+      // Existing user before sync was added: push local team up to Firestore
+      updateProfile({ myTeam: localTeam });
+    }
+  }, [effectiveProfile?.uid]);
 
   // Team picker: show once for onboarded users who haven't picked a team yet
   useEffect(() => {
