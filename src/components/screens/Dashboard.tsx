@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Zap, CheckCircle2, Circle, XCircle } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Zap, CheckCircle2, Circle, XCircle, Calendar, MapPin, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
@@ -26,16 +26,39 @@ function formatTo12h(time24: string) {
   return `${hour}:${min} ${ampm}`;
 }
 
-export default function Dashboard({ 
-  profile, 
+type SavedGame = { id: string; opponent: string; date: string; time: string; venue: string; isHome: boolean; competition: string; debrief?: object };
+
+function getNextGame(games: SavedGame[]): SavedGame | null {
+  const now = new Date();
+  return games
+    .filter(g => new Date(`${g.date}T${g.time || '00:00'}:00`) >= now)
+    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0] ?? null;
+}
+
+function daysUntilGame(game: SavedGame) {
+  const gameDate = new Date(`${game.date}T${game.time || '00:00'}:00`);
+  const now = new Date();
+  const diff = gameDate.getTime() - now.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  if (days === 0) return { label: `${hours}h`, sub: 'until kickoff' };
+  if (days === 1) return { label: 'Tomorrow', sub: game.time !== '00:00' ? `@ ${game.time}` : '' };
+  return { label: `${days}`, sub: 'days to go' };
+}
+
+export default function Dashboard({
+  profile,
   onActivityClick,
-  onNavClick
-}: { 
-  profile: UserProfile, 
+  onNavClick,
+  savedGames = [],
+}: {
+  profile: UserProfile,
   onActivityClick: (item: any) => void,
-  onNavClick: (screen: ScreenState) => void
+  onNavClick: (screen: ScreenState) => void,
+  savedGames?: SavedGame[],
 }) {
   const db = useFirestore();
+  const nextGame = useMemo(() => getNextGame(savedGames), [savedGames]);
   const planCacheKey = `gameday_plan_${profile.uid}_${new Date().toISOString().split('T')[0]}`;
   const [plan, setPlan] = useState<GeneratePersonalizedTrainingPlanOutput | null>(() => {
     try {
@@ -181,15 +204,54 @@ export default function Dashboard({
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 space-y-6 pb-32">
-        <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex flex-col items-center text-center space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary italic">Today's Focus</p>
-          <h2 className="text-2xl font-headline font-bold uppercase tracking-tight leading-none">
-            {loading ? "Syncing..." : plan?.dailyFocusTitle || "Awaiting Protocol"}
-          </h2>
-          <Button onClick={() => fetchPlan(true)} variant="ghost" className="h-6 p-0 text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-white flex items-center gap-1">
-            <RefreshCcw size={10} className={cn(loading && "animate-spin")} /> Refresh Protocol
+        {/* Daily focus */}
+        <div className="flex items-center justify-between px-1">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Today's Focus</p>
+            <h2 className="text-xl font-headline font-black uppercase tracking-tight leading-none mt-0.5">
+              {loading ? "Loading..." : plan?.dailyFocusTitle || "Awaiting Protocol"}
+            </h2>
+          </div>
+          <Button onClick={() => fetchPlan(true)} variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white shrink-0">
+            <RefreshCcw size={14} className={cn(loading && "animate-spin")} />
           </Button>
         </div>
+
+        {/* Next game */}
+        {nextGame && (() => {
+          const countdown = daysUntilGame(nextGame);
+          return (
+            <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-white/8 p-5 flex items-center justify-between active:scale-[0.98] transition-all">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0">
+                  <span className="text-lg font-black text-primary leading-none">{countdown.label}</span>
+                  {countdown.sub && <span className="text-[7px] font-bold uppercase tracking-wide text-primary/60 leading-none mt-0.5">{countdown.sub}</span>}
+                </div>
+                <div className="text-left">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Next Game</p>
+                  <p className="text-base font-headline font-black uppercase text-white leading-tight">vs {nextGame.opponent}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      <Calendar size={8} />
+                      {new Date(nextGame.date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                    </div>
+                    {nextGame.venue !== 'TBC' && (
+                      <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                        <MapPin size={8} />
+                        {nextGame.venue}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      <Shield size={8} />
+                      {nextGame.isHome ? 'Home' : 'Away'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-white/20 shrink-0" />
+            </button>
+          );
+        })()}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -284,8 +346,8 @@ export default function Dashboard({
         <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
           <Dumbbell size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Drills</span>
         </button>
-        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
-          <Zap size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Bonus</span>
+        <button onClick={() => onNavClick('fixtures')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
+          <Calendar size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Games</span>
         </button>
         <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
           <Camera size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Scanner</span>

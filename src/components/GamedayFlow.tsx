@@ -13,9 +13,15 @@ import Stats from './screens/Stats';
 import FoodTracker from './screens/FoodTracker';
 import Quests from './screens/Quests';
 import Settings from './screens/Settings';
+import Fixtures from './screens/Fixtures';
+import PatchNotes from './PatchNotes';
+import PostGameDebrief from './PostGameDebrief';
+import type { GameDebrief } from './PostGameDebrief';
+import type { GameFixture } from '@/ai/flows/extract-fixtures';
+import { CURRENT_VERSION } from '@/lib/patch-notes';
 import AuthScreen from './auth/AuthScreen';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { updateDocViaRest, setDocViaRest } from '@/firebase/firestore/rest-write';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -49,7 +55,9 @@ export type UserProfile = {
   email: string;
 };
 
-export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings';
+export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';
+
+export type SavedGame = GameFixture & { id: string; debrief?: GameDebrief };
 
 export default function GamedayFlow() {
   const { user: firebaseUser, loading: authLoading } = useUser();
@@ -60,6 +68,15 @@ export default function GamedayFlow() {
   // Demo Mode State
   const [demoUser, setDemoUser] = useState<{ uid: string; email: string } | null>(null);
   const [stalledConnection, setStalledConnection] = useState(false);
+
+  // Games / fixtures
+  const [savedGames, setSavedGames] = useState<SavedGame[]>([]);
+
+  // Patch notes
+  const [showPatchNotes, setShowPatchNotes] = useState(false);
+
+  // Post-game debrief
+  const [pendingDebrief, setPendingDebrief] = useState<SavedGame | null>(null);
 
   useEffect(() => {
     const handleBypass = () => {
@@ -157,6 +174,33 @@ export default function GamedayFlow() {
     return () => clearTimeout(timer);
   }, [effectiveUser, profileLoading, currentScreen]);
 
+  // Patch notes: show on first open after a version update
+  useEffect(() => {
+    if (!effectiveProfile) return;
+    try {
+      const seen = localStorage.getItem('gameday_version_seen');
+      if (seen !== CURRENT_VERSION) {
+        setShowPatchNotes(true);
+      }
+    } catch {}
+  }, [effectiveProfile]);
+
+  // Load saved games from Firestore
+  useEffect(() => {
+    if (!db || !effectiveUser) return;
+    const gamesRef = collection(db, 'users', effectiveUser.uid, 'games');
+    getDocs(gamesRef).then(snap => {
+      const games = snap.docs.map(d => ({ id: d.id, ...d.data() } as SavedGame));
+      setSavedGames(games);
+      // Check for any past games needing a debrief
+      const now = new Date();
+      const needsDebrief = games
+        .filter(g => new Date(`${g.date}T${g.time || '00:00'}:00`) < now && !g.debrief)
+        .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime())[0];
+      if (needsDebrief) setPendingDebrief(needsDebrief);
+    }).catch(() => {});
+  }, [db, effectiveUser?.uid]);
+
   const reliableUpdate = async (data: Record<string, any>) => {
     if (!userRef) return;
     try {
@@ -196,6 +240,39 @@ export default function GamedayFlow() {
       'dailyStats.sugar': (effectiveProfile.dailyStats?.sugar || 0) + stats.sugar,
     };
     reliableUpdate(update).catch(console.error);
+  };
+
+  const saveGames = async (games: GameFixture[]) => {
+    if (!db || !effectiveUser) return;
+    const gamesRef = collection(db, 'users', effectiveUser.uid, 'games');
+    const newSaved: SavedGame[] = [];
+    for (const g of games) {
+      try {
+        const docRef = await addDoc(gamesRef, g);
+        newSaved.push({ ...g, id: docRef.id });
+      } catch {}
+    }
+    setSavedGames(prev => [...prev, ...newSaved]);
+  };
+
+  const deleteGame = async (id: string) => {
+    if (!db || !effectiveUser) return;
+    try {
+      await deleteDoc(doc(db, 'users', effectiveUser.uid, 'games', id));
+    } catch {}
+    setSavedGames(prev => prev.filter(g => g.id !== id));
+  };
+
+  const saveDebrief = async (debrief: GameDebrief) => {
+    if (!db || !effectiveUser || !pendingDebrief) return;
+    const gameRef = doc(db, 'users', effectiveUser.uid, 'games', pendingDebrief.id);
+    const feedback = `vs ${pendingDebrief.opponent}: ${debrief.result} ${debrief.goalsFor}-${debrief.goalsAgainst}. Went well: ${debrief.wentWell}. To improve: ${debrief.toImprove}. Rating: ${debrief.rating}/5.`;
+    try {
+      await updateDoc(gameRef, { debrief });
+    } catch {}
+    setSavedGames(prev => prev.map(g => g.id === pendingDebrief.id ? { ...g, debrief } : g));
+    updateProfile({ lastFeedback: feedback });
+    setPendingDebrief(null);
   };
 
   const handleActivityClick = (item: any) => {
@@ -301,6 +378,7 @@ export default function GamedayFlow() {
           profile={effectiveProfile}
           onActivityClick={handleActivityClick}
           onNavClick={setCurrentScreen}
+          savedGames={savedGames}
         />
       )}
 
@@ -354,6 +432,33 @@ export default function GamedayFlow() {
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
           onComplete={(id) => awardXP(100, id)}
+        />
+      )}
+
+      {currentScreen === 'fixtures' && (
+        <Fixtures
+          onBack={() => setCurrentScreen('dashboard')}
+          onNavClick={setCurrentScreen}
+          savedGames={savedGames}
+          onSaveGames={saveGames}
+          onDeleteGame={deleteGame}
+        />
+      )}
+
+      {/* Patch notes overlay */}
+      {showPatchNotes && (
+        <PatchNotes onDismiss={() => {
+          setShowPatchNotes(false);
+          try { localStorage.setItem('gameday_version_seen', CURRENT_VERSION); } catch {}
+        }} />
+      )}
+
+      {/* Post-game debrief overlay */}
+      {pendingDebrief && !showPatchNotes && (
+        <PostGameDebrief
+          game={pendingDebrief}
+          onSubmit={saveDebrief}
+          onSkip={() => setPendingDebrief(null)}
         />
       )}
     </div>
