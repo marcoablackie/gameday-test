@@ -1,0 +1,935 @@
+{
+  "associationName": "FSC",
+  "seasonHash": "wOmel17d02",
+  "totalClubsStored": 65,
+  "totalFixturesStored": 30,
+  "clubs": [
+    {
+      "id": "GxK5PZMN6B",
+      "name": "Albion Park City Football Club",
+      "logo": "https://ocean.dribl.com/78a7ab1050d64dc5a9a2942abd7d175b"
+    },
+    {
+      "id": "OEN2yeBmqr",
+      "name": "Albion Park Cows FC",
+      "logo": "https://ocean.dribl.com/766796222cf647dfa00ddcb79619e215"
+    },
+    {
+      "id": "OVdzyb6KGr",
+      "name": "Albion Park Football Club",
+      "logo": "https://ocean.dribl.com/f8bc072c9c814deabcca3be560f88164"
+    },
+    {
+      "id": "LBdDXVxdb7",
+      "name": "Albion Park White Eagles",
+      "logo": "https://ocean.dribl.com/e5041d751a7340699e93dcc904d35a41"
+    },
+    {
+      "id": "AnmYPj1dzG",
+      "name": "Balgownie JFC",
+      "logo": "https://ocean.dribl.com/9117a942bf54478fbc9a971ec621956c"
+    },
+    {
+      "id": "8BdVyj1KE5",
+      "name": "Balgownie Rangers",
+      "logo": "https://ocean.dribl.com/c10a9ede698045d3b01e01e3f94ea8ad"
+    },
+    {
+      "id": "LBdDXVQdb7",
+      "name": "Bellambi Rosellas FC",
+      "logo": "https://ocean.dribl.com/5f18e126dbe54571a164da7590147a6c"
+    },
+    {
+      "id": "V8dnZxrdwL",
+      "name": "Berkeley Sports Football Club",
+      "logo": "https://ocean.dribl.com/255886bf6ae44f56ad2f8d85a7f4cdfd"
+    },
+    {
+      "id": "gld4E10mW5",
+      "name": "Bulli FC",
+      "logo": "https://ocean.dribl.com/aac466a4736f4d18b6a3ba06bcc3a461"
+    },
+    {
+      "id": "wOmelxed02",
+      "name": "Bulli JFC",
+      "logo": "https://ocean.dribl.com/53329871d247496a92101d945e43bf16"
+    },
+    {
+      "id": "VAN0g1zm69",
+      "name": "Coledale Waves JFC",
+      "logo": "https://ocean.dribl.com/bc7965e0d7b745729efa5ee70ce06240"
+    },
+    {
+      "id": "R1K361GNQ9",
+      "name": "Coniston FC",
+      "logo": "https://ocean.dribl.com/f8cab2b238214c83bc4b84ef31dd8a6a"
+    },
+    {
+      "id": "wxNxgYzmkp",
+      "name": "Coniston JFC",
+      "logo": "https://ocean.dribl.com/6bded533f82d4dfe81c04484183df800"
+    },
+    {
+      "id": "6lNbvxgNxE",
+      "name": "Corrimal JFC",
+      "logo": "https://ocean.dribl.com/4174ec14f3dc46268ce85c092775c12d"
+    },
+    {
+      "id": "gld4Ev2mW5",
+      "name": "Corrimal Rangers Football Club",
+      "logo": "https://ocean.dribl.com/adcf8a16c97f43a7afaf6538a8d3ea01"
+    },
+    {
+      "id": "1pN6M57m0g",
+      "name": "Cringila Lions FC",
+      "logo": "https://ocean.dribl.com/d62cf7323ef6418bb589d0f5f11e266c"
+    },
+    {
+      "id": "vbd9lAYK4R",
+      "name": "Cringila Lions JFC",
+      "logo": "https://ocean.dribl.com/d62cf7323ef6418bb589d0f5f11e266c"
+    },
+    {
+      "id": "R3NPW5Pmr4",
+      "name": "Dandaloo Football Club",
+      "logo": "https://ocean.dribl.com/29eda5eb26f148cda5773cddc63464e0"
+    },
+    {
+      "id": "bam17MnKwX",
+      "name": "Dapto Phoenix JFC",
+      "logo": "https://ocean.dribl.com/44d69b06559f4fb9b9ac728686657122"
+    },
+    {
+      "id": "kemA0z9dB7",
+      "name": "Fairy Meadow UTD FC",
+      "logo": "https://ocean.dribl.com/720559cd81df413d83c40e12037fedf2"
+    },
+    {
+      "id": "8RmwAl4KEJ",
+      "name": "Fernhill Falcons JFC",
+      "logo": "https://ocean.dribl.com/75f8ca21c9404d8aba7d953eb1ab8730"
+    },
+    {
+      "id": "Bjman8VNRq",
+      "name": "Fernhill FC",
+      "logo": "https://ocean.dribl.com/4ec146cc92a746e7af5657ec236a11fd"
+    },
+    {
+      "id": "LBdDXyQdb7",
+      "name": "Figtree FC",
+      "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041"
+    },
+    {
+      "id": "A4KLgrgNqy",
+      "name": "Football South Coast Hubs",
+      "logo": "https://ocean.dribl.com/c45bf019037a413c8828bd29dd5243d1"
+    },
+    {
+      "id": "08NObn7mZM",
+      "name": "Football South Coast Referees",
+      "logo": "https://ocean.dribl.com/6f77991e05f74413a30d2314e15fd531"
+    },
+    {
+      "id": "gld4EM0mW5",
+      "name": "Gerringong Breakers FC",
+      "logo": "https://ocean.dribl.com/2e41255036ff4e43bff62843eb008652"
+    },
+    {
+      "id": "RwNlR88djr",
+      "name": "Helensburgh Thistle FC",
+      "logo": "https://ocean.dribl.com/35d75df8cdbb4302a13412e879691e39"
+    },
+    {
+      "id": "AnmYP0pdzG",
+      "name": "Helensburgh Thistle JSC",
+      "logo": "https://ocean.dribl.com/6310864248d14f349d5151dcb0e17d16"
+    },
+    {
+      "id": "VAN0gA7m69",
+      "name": "Hill Top SC",
+      "logo": "https://ocean.dribl.com/1fa3348235d841858ce505cc2b2fa502"
+    },
+    {
+      "id": "R1K36qLNQ9",
+      "name": "IFS Community Wolves",
+      "logo": "https://ocean.dribl.com/e015e65aad1f4184a9e91b5a403c0a34"
+    },
+    {
+      "id": "wxNxgxAmkp",
+      "name": "Jamberoo Football Club",
+      "logo": "https://ocean.dribl.com/ffe3ffbb430d440eaffc1b024a688f3a"
+    },
+    {
+      "id": "6lNbvMpNxE",
+      "name": "Kemblawarra United",
+      "logo": "https://ocean.dribl.com/47d3c0b609944bdea3abc75037d33340"
+    },
+    {
+      "id": "1pN6MLQm0g",
+      "name": "Kiama Comets JFC",
+      "logo": "https://ocean.dribl.com/dccb2ed0adeb4a21b80a0c93c89dc9c6"
+    },
+    {
+      "id": "R3NPWpgmr4",
+      "name": "Kiama Quarriers FC",
+      "logo": "https://ocean.dribl.com/9fec758be7904f0ba36dc4d34682ff15"
+    },
+    {
+      "id": "bam17EjKwX",
+      "name": "Lake Heights Lightning JFC",
+      "logo": "https://ocean.dribl.com/3dc09c1a72bf4bcda2404a100f5743c1"
+    },
+    {
+      "id": "8RmwAaZKEJ",
+      "name": "Lakeside Lions JFC",
+      "logo": "https://ocean.dribl.com/32ab8fbe991f4a19b97be72130c655df"
+    },
+    {
+      "id": "BjmanEqNRq",
+      "name": "Moss Vale",
+      "logo": "https://ocean.dribl.com/c02a63a1aeb445a7aba6cc8dcadd2a2d"
+    },
+    {
+      "id": "LBdDXA4db7",
+      "name": "Northern FC",
+      "logo": "https://ocean.dribl.com/751a9954632045b3b489b53bccc686d7"
+    },
+    {
+      "id": "V8dnZaodwL",
+      "name": "Oak Flats Falcons",
+      "logo": "https://ocean.dribl.com/4b6f4350ecda485dafb0bacdbfe5868e"
+    },
+    {
+      "id": "gld4ELDmW5",
+      "name": "Oak Flats JSC",
+      "logo": "https://ocean.dribl.com/02a1d59f88b64e19b7ca534e1558d12e"
+    },
+    {
+      "id": "RwNlRaedjr",
+      "name": "Oak Flats Kraken ASC",
+      "logo": "https://ocean.dribl.com/bfa091586ef343d5a0a6fd206b6ac8ca"
+    },
+    {
+      "id": "AnmYP83dzG",
+      "name": "Picton Rangers FC",
+      "logo": "https://ocean.dribl.com/c3c8e38d15b8439b988ef823e66fe41f"
+    },
+    {
+      "id": "gld4ELAmW5",
+      "name": "Port Kembla FC",
+      "logo": "https://ocean.dribl.com/4e5c8d97ce774c43aeb4ce0dfc876ace"
+    },
+    {
+      "id": "RwNlRaDdjr",
+      "name": "Port Kembla JFC",
+      "logo": "https://ocean.dribl.com/271a2e0a91154ec29e49bbec6cff20fa"
+    },
+    {
+      "id": "AnmYP9zdzG",
+      "name": "Port Pumas FC",
+      "logo": "https://ocean.dribl.com/02b6dbeeae3e4c3585a439ef07a7a00f"
+    },
+    {
+      "id": "8BdVyYPKE5",
+      "name": "Russell Vale Cobras JFC",
+      "logo": "https://ocean.dribl.com/51e3d507cbc94f54b6d604be2cd11614"
+    },
+    {
+      "id": "wOmelM0d02",
+      "name": "Russell Vale FC",
+      "logo": "https://ocean.dribl.com/cf3d1c6d1c5b4309914384887cfe01a5"
+    },
+    {
+      "id": "kemAlVBdB7",
+      "name": "Shellharbour City FC",
+      "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe"
+    },
+    {
+      "id": "6lNbvbwNxE",
+      "name": "Shellharbour FC",
+      "logo": "https://ocean.dribl.com/5e39eed1658b47f69c961236c4636e4a"
+    },
+    {
+      "id": "8zdBO9PmBX",
+      "name": "Shellharbour FC (remove)",
+      "logo": "https://ocean.dribl.com/752751c7c5514554be5179b25affe4fd"
+    },
+    {
+      "id": "8nm71DjKOq",
+      "name": "South Coast United",
+      "logo": "https://ocean.dribl.com/e112df8e840048bd81f986610de3a376"
+    },
+    {
+      "id": "1pN6MGAm0g",
+      "name": "Tarrawanna Blueys FC",
+      "logo": "https://ocean.dribl.com/581143be90aa4dabb89a6d93e2f40c38"
+    },
+    {
+      "id": "Bjmanj3NRq",
+      "name": "Tarrawanna Rovers JFC",
+      "logo": "https://ocean.dribl.com/47d8b458dcf74a62ad9022acbea0169a"
+    },
+    {
+      "id": "GxK5PWaN6B",
+      "name": "Thirroul JFC",
+      "logo": "https://ocean.dribl.com/92ffa4466d18486e9d93e1e1c383348b"
+    },
+    {
+      "id": "OVdzypZKGr",
+      "name": "Unanderra Hearts FC",
+      "logo": "https://ocean.dribl.com/ff1839c83c5c402ebe2148f419e52b6d"
+    },
+    {
+      "id": "OEN2yxVmqr",
+      "name": "Unanderra Hearts JFC",
+      "logo": "https://ocean.dribl.com/5f47d05a5edd4cd1adcd7f1aad22ebef"
+    },
+    {
+      "id": "LBdDXRwdb7",
+      "name": "United Wolves AFC",
+      "logo": "https://ocean.dribl.com/6160334e8ead4c6e929a1a7cab6959bb"
+    },
+    {
+      "id": "AnmYPGzdzG",
+      "name": "University of Wollongong FC",
+      "logo": "https://ocean.dribl.com/e3617a9577ec47a3a8943135002d8089"
+    },
+    {
+      "id": "wOmel90d02",
+      "name": "University of Wollongong Juniors",
+      "logo": "https://ocean.dribl.com/f458fa384d8a4b42841b0b1c91ca40e2"
+    },
+    {
+      "id": "8BdVy8PKE5",
+      "name": "Warilla JFC",
+      "logo": "https://ocean.dribl.com/17754057ad9344ee8edd92bdca01587d"
+    },
+    {
+      "id": "VAN0glkm69",
+      "name": "Warilla Wanderers FC",
+      "logo": "https://ocean.dribl.com/bb897bcc7b0e4f2995cce71c3511e5a1"
+    },
+    {
+      "id": "R1K36XONQ9",
+      "name": "Wollongong Olympic FC",
+      "logo": "https://ocean.dribl.com/f0459a86606149749fb396d2a99cf779"
+    },
+    {
+      "id": "kemAl7BdB7",
+      "name": "Wollongong United FC",
+      "logo": "https://ocean.dribl.com/a4a75d448e284381a8c6621e12823bba"
+    },
+    {
+      "id": "8nm71RjKOq",
+      "name": "Woonona Sharks FC",
+      "logo": "https://ocean.dribl.com/327e425f163241c18ceb7b65b29c726f"
+    },
+    {
+      "id": "1pN6MeAm0g",
+      "name": "Woonona Sharks JFC",
+      "logo": "https://ocean.dribl.com/cab5e55af8984386877c3975b15bdf02"
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "Pmj2zwLy9m",
+      "matchDate": "2026-05-21T09:00:00.000000Z",
+      "round": "Round 10",
+      "status": "washout reschedule",
+      "competitionGroup": "Premier Leagues",
+      "leagueTierName": "Men's Premier League 1 - Second Grade",
+      "groundLocation": "Crehan Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Cringila Lions FC  Second Grade Male",
+        "logo": "https://ocean.dribl.com/d62cf7323ef6418bb589d0f5f11e266c",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Albion Park White Eagles  Second Grade Male",
+        "logo": "https://ocean.dribl.com/e5041d751a7340699e93dcc904d35a41",
+        "score": null
+      }
+    },
+    {
+      "id": "Pmj2z0beQm",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 10",
+      "status": "pending",
+      "competitionGroup": "Premier Leagues",
+      "leagueTierName": "Men's Premier League 1 - Youth Grade",
+      "groundLocation": "Crehan Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Cringila Lions FC  Youth Grade Male",
+        "logo": "https://ocean.dribl.com/d62cf7323ef6418bb589d0f5f11e266c",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Albion Park White Eagles  Youth Grade Male",
+        "logo": "https://ocean.dribl.com/e5041d751a7340699e93dcc904d35a41",
+        "score": null
+      }
+    },
+    {
+      "id": "ydoR79xWJK",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "13 Mixed Div 1",
+      "groundLocation": "Bulli Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Bulli JFC 13 Div 1",
+        "logo": "https://ocean.dribl.com/53329871d247496a92101d945e43bf16",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Balgownie JFC 13 Div 1",
+        "logo": "https://ocean.dribl.com/9117a942bf54478fbc9a971ec621956c",
+        "score": null
+      }
+    },
+    {
+      "id": "ld456PRQem",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "13 Mixed Div 2",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "2",
+      "homeTeam": {
+        "name": "Shellharbour City FC 13 Div 2",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Balgownie JFC 13 Div 2",
+        "logo": "https://ocean.dribl.com/9117a942bf54478fbc9a971ec621956c",
+        "score": null
+      }
+    },
+    {
+      "id": "1K3p5B7k7d",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "13 Girls Div 1",
+      "groundLocation": "Cawley Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Russell Vale Cobras JFC 13 G Div 1",
+        "logo": "https://ocean.dribl.com/51e3d507cbc94f54b6d604be2cd11614",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "University of Wollongong FC 13 G Div 1",
+        "logo": "https://ocean.dribl.com/e3617a9577ec47a3a8943135002d8089",
+        "score": null
+      }
+    },
+    {
+      "id": "am140n8ZZd",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "15 Mixed Div 1",
+      "groundLocation": "Unanderra Oval",
+      "fieldNumber": "01",
+      "homeTeam": {
+        "name": "Unanderra Hearts FC 15 Div 1",
+        "logo": "https://ocean.dribl.com/ff1839c83c5c402ebe2148f419e52b6d",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Coniston JFC 15 Div 1",
+        "logo": "https://ocean.dribl.com/6bded533f82d4dfe81c04484183df800",
+        "score": null
+      }
+    },
+    {
+      "id": "jmazZ013VN",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "16 Girls Div 1",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Shellharbour City FC 16 G Div 1 Blue",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Shellharbour City FC 16 G Div 1 15GD1",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      }
+    },
+    {
+      "id": "1K3p5BDnBd",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "13 Girls Div 2",
+      "groundLocation": "Kiama Sporting Complex",
+      "fieldNumber": "2",
+      "homeTeam": {
+        "name": "Kiama Comets JFC 13 G Div 2",
+        "logo": "https://ocean.dribl.com/dccb2ed0adeb4a21b80a0c93c89dc9c6",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Figtree FC 13 G Div 2",
+        "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041",
+        "score": null
+      }
+    },
+    {
+      "id": "ld45qyV6rm",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 35 Men Div 3",
+      "groundLocation": "Balls Paddock",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Bulli FC O35 Men Div 3",
+        "logo": "https://ocean.dribl.com/aac466a4736f4d18b6a3ba06bcc3a461",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Coledale Waves JFC O35 Men Div 3",
+        "logo": "https://ocean.dribl.com/bc7965e0d7b745729efa5ee70ce06240",
+        "score": null
+      }
+    },
+    {
+      "id": "OmepWJbo6d",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 45 Men Div 2",
+      "groundLocation": "Lakelands Oval",
+      "fieldNumber": "2",
+      "homeTeam": {
+        "name": "Dapto Phoenix JFC O45 Men Div 2",
+        "logo": "https://ocean.dribl.com/44d69b06559f4fb9b9ac728686657122",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Kiama Quarriers FC O45 Men Div 2",
+        "logo": "https://ocean.dribl.com/9fec758be7904f0ba36dc4d34682ff15",
+        "score": null
+      }
+    },
+    {
+      "id": "JmXWYYDwDd",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "12 Girls Grading",
+      "groundLocation": "Kiama Sporting Complex",
+      "fieldNumber": "3 A",
+      "homeTeam": {
+        "name": "Kiama Comets JFC 12 Grading",
+        "logo": "https://ocean.dribl.com/dccb2ed0adeb4a21b80a0c93c89dc9c6",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Balgownie JFC 12 Grading B",
+        "logo": "https://ocean.dribl.com/9117a942bf54478fbc9a971ec621956c",
+        "score": null
+      }
+    },
+    {
+      "id": "nmYnXXQapN",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "12 Girls Grading",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "3 B",
+      "homeTeam": {
+        "name": "Shellharbour City FC 12 Grading A",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Figtree FC 12 Grading A",
+        "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041",
+        "score": null
+      }
+    },
+    {
+      "id": "ZKRynna0rN",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "12 Girls Grading",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "3 A",
+      "homeTeam": {
+        "name": "Shellharbour City FC 12 Grading C",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Bulli JFC 12 Grading A",
+        "logo": "https://ocean.dribl.com/53329871d247496a92101d945e43bf16",
+        "score": null
+      }
+    },
+    {
+      "id": "JmXWYO2Zzd",
+      "matchDate": "2026-05-22T08:00:00.000000Z",
+      "round": "Round 9",
+      "status": "pending",
+      "competitionGroup": "Premier Leagues",
+      "leagueTierName": "Women's Premier League - Second Grade",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "4",
+      "homeTeam": {
+        "name": "Shellharbour City FC  Second Grade Female",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Bulli FC  Second Grade Female",
+        "logo": "https://ocean.dribl.com/aac466a4736f4d18b6a3ba06bcc3a461",
+        "score": null
+      }
+    },
+    {
+      "id": "ZNQOp5Abjd",
+      "matchDate": "2026-05-22T09:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 35 Men Div 2",
+      "groundLocation": "Harry Graham Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Figtree FC O35 Men Div 2 Pirates",
+        "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Coledale Waves JFC O35 Men Div 2",
+        "logo": "https://ocean.dribl.com/bc7965e0d7b745729efa5ee70ce06240",
+        "score": null
+      }
+    },
+    {
+      "id": "JmXWxa7lnd",
+      "matchDate": "2026-05-22T09:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 35 Men Div 3",
+      "groundLocation": "Judy Masters Oval",
+      "fieldNumber": "3",
+      "homeTeam": {
+        "name": "Northern FC O35 Men Div 3",
+        "logo": "https://ocean.dribl.com/751a9954632045b3b489b53bccc686d7",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Figtree FC O35 Men Div 3 Blaze",
+        "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041",
+        "score": null
+      }
+    },
+    {
+      "id": "Rdk2yZoRVK",
+      "matchDate": "2026-05-22T09:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 45 Men Div 1",
+      "groundLocation": "Thomas Gibson Park",
+      "fieldNumber": "2",
+      "homeTeam": {
+        "name": "Thirroul JFC O45 Men Div 1",
+        "logo": "https://ocean.dribl.com/92ffa4466d18486e9d93e1e1c383348b",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Helensburgh Thistle FC O45 Men Div 1",
+        "logo": "https://ocean.dribl.com/35d75df8cdbb4302a13412e879691e39",
+        "score": null
+      }
+    },
+    {
+      "id": "am140pOLWd",
+      "matchDate": "2026-05-22T09:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 45 Men Div 1",
+      "groundLocation": "St. James Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Coledale Waves JFC O45 Men Div 1",
+        "logo": "https://ocean.dribl.com/bc7965e0d7b745729efa5ee70ce06240",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Figtree FC O45 Men Div 1 Fire",
+        "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041",
+        "score": null
+      }
+    },
+    {
+      "id": "BdDb50jlQN",
+      "matchDate": "2026-05-22T09:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 35 Men Div 4",
+      "groundLocation": "Rex Jackson Oval",
+      "fieldNumber": "01",
+      "homeTeam": {
+        "name": "Helensburgh Thistle FC O35 Men Div 4",
+        "logo": "https://ocean.dribl.com/35d75df8cdbb4302a13412e879691e39",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Dandaloo Football Club O35 Men Div 4",
+        "logo": "https://ocean.dribl.com/29eda5eb26f148cda5773cddc63464e0",
+        "score": null
+      }
+    },
+    {
+      "id": "ydoRyA26YK",
+      "matchDate": "2026-05-22T09:00:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 45 Men Div 2",
+      "groundLocation": "Rex Jackson Oval",
+      "fieldNumber": "02",
+      "homeTeam": {
+        "name": "Helensburgh Thistle FC O45 Men Div 2",
+        "logo": "https://ocean.dribl.com/35d75df8cdbb4302a13412e879691e39",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Figtree FC O45 Men Div 2 Fire",
+        "logo": "https://ocean.dribl.com/90288bfe066d4c68b3343f200e57f041",
+        "score": null
+      }
+    },
+    {
+      "id": "yKJJoyzEXK",
+      "matchDate": "2026-05-22T09:20:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "18 Male Div 2",
+      "groundLocation": "Bulli Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Bulli JFC 18 Div 2 Royal",
+        "logo": "https://ocean.dribl.com/53329871d247496a92101d945e43bf16",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Lakeside Lions JFC 18 Div 2",
+        "logo": "https://ocean.dribl.com/32ab8fbe991f4a19b97be72130c655df",
+        "score": null
+      }
+    },
+    {
+      "id": "Rdk2zOWy2K",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "14 Mixed Div 2",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "2",
+      "homeTeam": {
+        "name": "Shellharbour City FC 14 Div 2",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Woonona Sharks FC 14 Div 2",
+        "logo": "https://ocean.dribl.com/327e425f163241c18ceb7b65b29c726f",
+        "score": null
+      }
+    },
+    {
+      "id": "BdDb5xezJN",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 4",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "18 Male Div 2",
+      "groundLocation": "Unanderra Oval",
+      "fieldNumber": "01",
+      "homeTeam": {
+        "name": "Unanderra Hearts FC 18 Div 2",
+        "logo": "https://ocean.dribl.com/ff1839c83c5c402ebe2148f419e52b6d",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Bulli JFC 18 Div 2 Blue",
+        "logo": "https://ocean.dribl.com/53329871d247496a92101d945e43bf16",
+        "score": null
+      }
+    },
+    {
+      "id": "vdWDR8z3nm",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "15 Mixed Div 1",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Shellharbour City FC 15 Div 1",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Highlands FC 15 Div 1 HFC U15",
+        "logo": "https://ocean.dribl.com/39d1c5fc922e42a2b638fe168be60047",
+        "score": null
+      }
+    },
+    {
+      "id": "JmXWxQpvWd",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "15 Mixed Div 2",
+      "groundLocation": "Kiama Sporting Complex",
+      "fieldNumber": "2",
+      "homeTeam": {
+        "name": "Kiama Comets JFC 15 Div 2",
+        "logo": "https://ocean.dribl.com/dccb2ed0adeb4a21b80a0c93c89dc9c6",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Balgownie JFC 15 Div 2",
+        "logo": "https://ocean.dribl.com/9117a942bf54478fbc9a971ec621956c",
+        "score": null
+      }
+    },
+    {
+      "id": "yKJJoyQLbK",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "14 Girls Div 2",
+      "groundLocation": "Kiama Sporting Complex",
+      "fieldNumber": "3",
+      "homeTeam": {
+        "name": "Kiama Comets JFC 14 G Div 2",
+        "logo": "https://ocean.dribl.com/dccb2ed0adeb4a21b80a0c93c89dc9c6",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Shellharbour City FC 14 G Div 2",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      }
+    },
+    {
+      "id": "jmazZRE16N",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 35 Men Div 2",
+      "groundLocation": "Cawley Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Russell Vale FC O35 Men Div 2 Lions",
+        "logo": "https://ocean.dribl.com/cf3d1c6d1c5b4309914384887cfe01a5",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Fernhill FC O35 Men Div 2",
+        "logo": "https://ocean.dribl.com/4ec146cc92a746e7af5657ec236a11fd",
+        "score": null
+      }
+    },
+    {
+      "id": "Rdk2yZozVK",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "Association Competition (Adult)",
+      "leagueTierName": "Over 35 Men Div 3",
+      "groundLocation": "King Mickey Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Warilla Wanderers FC O35 Men Div 3",
+        "logo": "https://ocean.dribl.com/bb897bcc7b0e4f2995cce71c3511e5a1",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Albion Park Football Club O35 Men Div 3 Yellow",
+        "logo": "https://ocean.dribl.com/f8bc072c9c814deabcca3be560f88164",
+        "score": null
+      }
+    },
+    {
+      "id": "BdDbPPbZGN",
+      "matchDate": "2026-05-22T09:30:00.000000Z",
+      "round": "Round 7",
+      "status": "pending",
+      "competitionGroup": "IMB Bank Junior Competition",
+      "leagueTierName": "13 Mixed Div 4",
+      "groundLocation": "Myimbarr Park",
+      "fieldNumber": "3",
+      "homeTeam": {
+        "name": "Shellharbour City FC 13 Div 4",
+        "logo": "https://ocean.dribl.com/9041c1f0fcbe4d83ae612dcd4fcc29fe",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Albion Park Football Club 13 Div 4",
+        "logo": "https://ocean.dribl.com/f8bc072c9c814deabcca3be560f88164",
+        "score": null
+      }
+    },
+    {
+      "id": "Vdz1PP0EpK",
+      "matchDate": "2026-05-22T10:00:00.000000Z",
+      "round": "Round 10",
+      "status": "pending",
+      "competitionGroup": "Premier Leagues",
+      "leagueTierName": "Men's Premier League 1 - First Grade",
+      "groundLocation": "Crehan Park",
+      "fieldNumber": "1",
+      "homeTeam": {
+        "name": "Cringila Lions FC  First Grade Male",
+        "logo": "https://ocean.dribl.com/d62cf7323ef6418bb589d0f5f11e266c",
+        "score": null
+      },
+      "awayTeam": {
+        "name": "Albion Park White Eagles  First Grade Male",
+        "logo": "https://ocean.dribl.com/e5041d751a7340699e93dcc904d35a41",
+        "score": null
+      }
+    }
+  ]
+}

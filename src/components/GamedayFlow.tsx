@@ -17,11 +17,10 @@ import Fixtures from './screens/Fixtures';
 import PatchNotes from './PatchNotes';
 import PostGameDebrief from './PostGameDebrief';
 import type { GameDebrief } from './PostGameDebrief';
-import type { GameFixture } from '@/ai/flows/extract-fixtures';
 import { CURRENT_VERSION } from '@/lib/patch-notes';
 import AuthScreen from './auth/AuthScreen';
 import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { updateDocViaRest, setDocViaRest } from '@/firebase/firestore/rest-write';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -57,8 +56,6 @@ export type UserProfile = {
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';
 
-export type SavedGame = GameFixture & { id: string; debrief?: GameDebrief };
-
 export default function GamedayFlow() {
   const { user: firebaseUser, loading: authLoading } = useUser();
   const db = useFirestore();
@@ -69,14 +66,11 @@ export default function GamedayFlow() {
   const [demoUser, setDemoUser] = useState<{ uid: string; email: string } | null>(null);
   const [stalledConnection, setStalledConnection] = useState(false);
 
-  // Games / fixtures
-  const [savedGames, setSavedGames] = useState<SavedGame[]>([]);
-
   // Patch notes
   const [showPatchNotes, setShowPatchNotes] = useState(false);
 
-  // Post-game debrief
-  const [pendingDebrief, setPendingDebrief] = useState<SavedGame | null>(null);
+  // Post-game debrief — uses FSC JSON data; tracks which fixture IDs have been debriefed
+  const [pendingDebriefFixtureId, setPendingDebriefFixtureId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleBypass = () => {
@@ -185,21 +179,27 @@ export default function GamedayFlow() {
     } catch {}
   }, [effectiveProfile]);
 
-  // Load saved games from Firestore
+  // Check for past fixtures needing a debrief (based on saved club + FSC JSON)
   useEffect(() => {
-    if (!db || !effectiveUser) return;
-    const gamesRef = collection(db, 'users', effectiveUser.uid, 'games');
-    getDocs(gamesRef).then(snap => {
-      const games = snap.docs.map(d => ({ id: d.id, ...d.data() } as SavedGame));
-      setSavedGames(games);
-      // Check for any past games needing a debrief
+    if (!effectiveProfile) return;
+    try {
+      const myClub = localStorage.getItem('gameday_my_club');
+      if (!myClub) return;
+      const { name: clubName } = JSON.parse(myClub);
+      const debriefedIds: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
       const now = new Date();
-      const needsDebrief = games
-        .filter(g => new Date(`${g.date}T${g.time || '00:00'}:00`) < now && !g.debrief)
-        .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime())[0];
-      if (needsDebrief) setPendingDebrief(needsDebrief);
-    }).catch(() => {});
-  }, [db, effectiveUser?.uid]);
+      const { fixtures } = require('@/data/fsc_clean_season_database.json');
+      const cn = clubName.toLowerCase();
+      const pastNeedingDebrief = (fixtures as any[])
+        .filter(f =>
+          new Date(f.matchDate.replace('Z', '')) < now &&
+          (f.homeTeam.name.toLowerCase().includes(cn) || f.awayTeam.name.toLowerCase().includes(cn)) &&
+          !debriefedIds.includes(f.id)
+        )
+        .sort((a: any, b: any) => b.matchDate.localeCompare(a.matchDate))[0];
+      if (pastNeedingDebrief) setPendingDebriefFixtureId(pastNeedingDebrief.id);
+    } catch {}
+  }, [effectiveProfile]);
 
   const reliableUpdate = async (data: Record<string, any>) => {
     if (!userRef) return;
@@ -242,37 +242,15 @@ export default function GamedayFlow() {
     reliableUpdate(update).catch(console.error);
   };
 
-  const saveGames = async (games: GameFixture[]) => {
-    if (!db || !effectiveUser) return;
-    const gamesRef = collection(db, 'users', effectiveUser.uid, 'games');
-    const newSaved: SavedGame[] = [];
-    for (const g of games) {
-      try {
-        const docRef = await addDoc(gamesRef, g);
-        newSaved.push({ ...g, id: docRef.id });
-      } catch {}
-    }
-    setSavedGames(prev => [...prev, ...newSaved]);
-  };
-
-  const deleteGame = async (id: string) => {
-    if (!db || !effectiveUser) return;
+  const saveDebrief = (debrief: GameDebrief) => {
+    if (!pendingDebriefFixtureId) return;
     try {
-      await deleteDoc(doc(db, 'users', effectiveUser.uid, 'games', id));
+      const existing: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
+      localStorage.setItem('gameday_debriefed', JSON.stringify([...existing, pendingDebriefFixtureId]));
     } catch {}
-    setSavedGames(prev => prev.filter(g => g.id !== id));
-  };
-
-  const saveDebrief = async (debrief: GameDebrief) => {
-    if (!db || !effectiveUser || !pendingDebrief) return;
-    const gameRef = doc(db, 'users', effectiveUser.uid, 'games', pendingDebrief.id);
-    const feedback = `vs ${pendingDebrief.opponent}: ${debrief.result} ${debrief.goalsFor}-${debrief.goalsAgainst}. Went well: ${debrief.wentWell}. To improve: ${debrief.toImprove}. Rating: ${debrief.rating}/5.`;
-    try {
-      await updateDoc(gameRef, { debrief });
-    } catch {}
-    setSavedGames(prev => prev.map(g => g.id === pendingDebrief.id ? { ...g, debrief } : g));
+    const feedback = `Post-game: ${debrief.result} ${debrief.goalsFor}-${debrief.goalsAgainst}. Went well: ${debrief.wentWell}. To improve: ${debrief.toImprove}. Rating: ${debrief.rating}/5.`;
     updateProfile({ lastFeedback: feedback });
-    setPendingDebrief(null);
+    setPendingDebriefFixtureId(null);
   };
 
   const handleActivityClick = (item: any) => {
@@ -378,7 +356,6 @@ export default function GamedayFlow() {
           profile={effectiveProfile}
           onActivityClick={handleActivityClick}
           onNavClick={setCurrentScreen}
-          savedGames={savedGames}
         />
       )}
 
@@ -439,9 +416,6 @@ export default function GamedayFlow() {
         <Fixtures
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
-          savedGames={savedGames}
-          onSaveGames={saveGames}
-          onDeleteGame={deleteGame}
         />
       )}
 
@@ -454,13 +428,18 @@ export default function GamedayFlow() {
       )}
 
       {/* Post-game debrief overlay */}
-      {pendingDebrief && !showPatchNotes && (
-        <PostGameDebrief
-          game={pendingDebrief}
-          onSubmit={saveDebrief}
-          onSkip={() => setPendingDebrief(null)}
-        />
-      )}
+      {pendingDebriefFixtureId && !showPatchNotes && (() => {
+        const { fixtures } = require('@/data/fsc_clean_season_database.json');
+        const fixture = (fixtures as any[]).find((f: any) => f.id === pendingDebriefFixtureId);
+        if (!fixture) return null;
+        const myClubRaw = localStorage.getItem('gameday_my_club');
+        const myClubName = myClubRaw ? JSON.parse(myClubRaw).name.toLowerCase() : '';
+        const isHome = fixture.homeTeam.name.toLowerCase().includes(myClubName);
+        const opponent = isHome ? fixture.awayTeam.name : fixture.homeTeam.name;
+        const opponentClean = opponent.includes('  ') ? opponent.split('  ')[0].trim() : opponent;
+        const game = { id: fixture.id, opponent: opponentClean, date: fixture.matchDate.split('T')[0], time: fixture.matchDate.split('T')[1]?.slice(0,5) || '00:00', venue: fixture.groundLocation, isHome, competition: fixture.leagueTierName };
+        return <PostGameDebrief game={game} onSubmit={saveDebrief} onSkip={() => setPendingDebriefFixtureId(null)} />;
+      })()}
     </div>
   );
 }

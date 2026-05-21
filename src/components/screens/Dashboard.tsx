@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Zap, CheckCircle2, Circle, XCircle, Calendar, MapPin, Shield } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, Circle, XCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,13 @@ import { getDocViaRest } from '@/firebase/firestore/rest-fetch';
 import { setDocViaRest } from '@/firebase/firestore/rest-write';
 import { cn } from '@/lib/utils';
 import type { UserProfile, ScreenState } from '../GamedayFlow';
+import fscData from '@/data/fsc_clean_season_database.json';
 
 function formatTo12h(time24: string) {
   if (!time24) return "";
   const cleanTime = time24.split(' ')[0];
   const parts = cleanTime.split(':');
   if (parts.length < 2) return time24;
-  
   let hour = parseInt(parts[0]);
   const min = parts[1].substring(0, 2);
   const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -26,23 +26,36 @@ function formatTo12h(time24: string) {
   return `${hour}:${min} ${ampm}`;
 }
 
-type SavedGame = { id: string; opponent: string; date: string; time: string; venue: string; isHome: boolean; competition: string; debrief?: object };
+type FSCFixture = { id: string; matchDate: string; round: string; groundLocation: string; homeTeam: { name: string; logo: string; score: number | null }; awayTeam: { name: string; logo: string; score: number | null } };
 
-function getNextGame(games: SavedGame[]): SavedGame | null {
+function getNextGameForClub(clubName: string): (FSCFixture & { isHome: boolean; opponentName: string; opponentLogo: string }) | null {
   const now = new Date();
-  return games
-    .filter(g => new Date(`${g.date}T${g.time || '00:00'}:00`) >= now)
-    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0] ?? null;
+  const cn = clubName.toLowerCase();
+  const upcoming = (fscData.fixtures as FSCFixture[])
+    .filter(f => {
+      const gameDate = new Date(f.matchDate.replace('Z', ''));
+      return gameDate >= now && (f.homeTeam.name.toLowerCase().includes(cn) || f.awayTeam.name.toLowerCase().includes(cn));
+    })
+    .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
+  if (!upcoming[0]) return null;
+  const f = upcoming[0];
+  const isHome = f.homeTeam.name.toLowerCase().includes(cn);
+  return {
+    ...f,
+    isHome,
+    opponentName: isHome ? f.awayTeam.name : f.homeTeam.name,
+    opponentLogo: isHome ? f.awayTeam.logo : f.homeTeam.logo,
+  };
 }
 
-function daysUntilGame(game: SavedGame) {
-  const gameDate = new Date(`${game.date}T${game.time || '00:00'}:00`);
+function daysUntilDate(isoString: string) {
+  const gameDate = new Date(isoString.replace('Z', ''));
   const now = new Date();
   const diff = gameDate.getTime() - now.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   if (days === 0) return { label: `${hours}h`, sub: 'until kickoff' };
-  if (days === 1) return { label: 'Tomorrow', sub: game.time !== '00:00' ? `@ ${game.time}` : '' };
+  if (days === 1) return { label: 'Tomorrow', sub: '' };
   return { label: `${days}`, sub: 'days to go' };
 }
 
@@ -50,15 +63,25 @@ export default function Dashboard({
   profile,
   onActivityClick,
   onNavClick,
-  savedGames = [],
 }: {
   profile: UserProfile,
   onActivityClick: (item: any) => void,
   onNavClick: (screen: ScreenState) => void,
-  savedGames?: SavedGame[],
 }) {
   const db = useFirestore();
-  const nextGame = useMemo(() => getNextGame(savedGames), [savedGames]);
+  const [myClub, setMyClub] = useState<{ id: string; name: string; logo: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('gameday_my_club');
+      if (saved) setMyClub(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const nextGame = useMemo(
+    () => (myClub ? getNextGameForClub(myClub.name) : null),
+    [myClub]
+  );
   const planCacheKey = `gameday_plan_${profile.uid}_${new Date().toISOString().split('T')[0]}`;
   const [plan, setPlan] = useState<GeneratePersonalizedTrainingPlanOutput | null>(() => {
     try {
@@ -219,39 +242,51 @@ export default function Dashboard({
 
         {/* Next game */}
         {nextGame && (() => {
-          const countdown = daysUntilGame(nextGame);
+          const countdown = daysUntilDate(nextGame.matchDate);
+          const gameDate = new Date(nextGame.matchDate.replace('Z', ''));
+          const dateLabel = gameDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+          const opponent = nextGame.opponentName.includes('  ')
+            ? nextGame.opponentName.split('  ')[0].trim()
+            : nextGame.opponentName.split(' ').slice(0, -2).join(' ') || nextGame.opponentName;
           return (
-            <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-white/8 p-5 flex items-center justify-between active:scale-[0.98] transition-all">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0">
-                  <span className="text-lg font-black text-primary leading-none">{countdown.label}</span>
-                  {countdown.sub && <span className="text-[7px] font-bold uppercase tracking-wide text-primary/60 leading-none mt-0.5">{countdown.sub}</span>}
-                </div>
-                <div className="text-left">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Next Game</p>
-                  <p className="text-base font-headline font-black uppercase text-white leading-tight">vs {nextGame.opponent}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                      <Calendar size={8} />
-                      {new Date(nextGame.date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
-                    </div>
-                    {nextGame.venue !== 'TBC' && (
-                      <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                        <MapPin size={8} />
-                        {nextGame.venue}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                      <Shield size={8} />
-                      {nextGame.isHome ? 'Home' : 'Away'}
-                    </div>
+            <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-white/8 p-5 flex items-center gap-4 active:scale-[0.98] transition-all">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0">
+                <span className="text-lg font-black text-primary leading-none">{countdown.label}</span>
+                {countdown.sub && <span className="text-[7px] font-bold uppercase tracking-wide text-primary/60 leading-none mt-0.5">{countdown.sub}</span>}
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Next Game</p>
+                <p className="text-base font-headline font-black uppercase text-white leading-tight truncate">vs {opponent}</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                    <Calendar size={8} />{dateLabel}
+                  </div>
+                  <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                    <MapPin size={8} />{nextGame.groundLocation}
+                  </div>
+                  <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                    <Shield size={8} />{nextGame.isHome ? 'Home' : 'Away'}
                   </div>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-white/20 shrink-0" />
+              <img src={nextGame.opponentLogo} alt="" className="h-10 w-10 rounded-xl object-contain bg-white/5 shrink-0" />
             </button>
           );
         })()}
+
+        {/* No club set prompt */}
+        {!nextGame && !myClub && (
+          <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-dashed border-white/10 p-5 flex items-center gap-4 active:scale-[0.98] transition-all">
+            <div className="h-10 w-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <Calendar size={16} className="text-white/30" />
+            </div>
+            <div className="text-left">
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Set Your Club</p>
+              <p className="text-[8px] font-bold uppercase tracking-widest text-white/20">Browse fixtures & select your team</p>
+            </div>
+            <ChevronRight size={14} className="text-white/20 ml-auto shrink-0" />
+          </button>
+        )}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
