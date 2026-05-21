@@ -16,6 +16,8 @@ import Settings from './screens/Settings';
 import Fixtures from './screens/Fixtures';
 import PatchNotes from './PatchNotes';
 import PostGameDebrief from './PostGameDebrief';
+import TeamPicker from './TeamPicker';
+import { getSavedTeam } from '@/lib/fsc-data';
 import type { GameDebrief } from './PostGameDebrief';
 import { CURRENT_VERSION } from '@/lib/patch-notes';
 import AuthScreen from './auth/AuthScreen';
@@ -94,6 +96,9 @@ export default function GamedayFlow() {
 
   // Patch notes
   const [showPatchNotes, setShowPatchNotes] = useState(false);
+
+  // Team picker — shown after paywall for new users, or once for existing users without a team
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
 
   // Post-game debrief — uses FSC JSON data; tracks which fixture IDs have been debriefed
   const [pendingDebriefFixtureId, setPendingDebriefFixtureId] = useState<string | null>(null);
@@ -199,11 +204,19 @@ export default function GamedayFlow() {
     if (!effectiveProfile) return;
     try {
       const seen = localStorage.getItem('gameday_version_seen');
-      if (seen !== CURRENT_VERSION) {
-        setShowPatchNotes(true);
-      }
+      if (seen !== CURRENT_VERSION) setShowPatchNotes(true);
     } catch {}
   }, [effectiveProfile]);
+
+  // Team picker: show once for onboarded users who haven't picked a team yet
+  useEffect(() => {
+    if (!effectiveProfile?.isOnboarded) return;
+    if (getSavedTeam()) return; // already set
+    try {
+      const skipped = localStorage.getItem('gameday_team_picker_skipped');
+      if (!skipped) setShowTeamPicker(true);
+    } catch {}
+  }, [effectiveProfile?.isOnboarded]);
 
   // Check for past fixtures needing a debrief (lazy-load FSC data)
   useEffect(() => {
@@ -343,18 +356,19 @@ export default function GamedayFlow() {
       )}
 
       {currentScreen === 'paywall' && (
-        <Paywall 
+        <Paywall
           onComplete={() => {
             updateProfile({ hasAccess: true });
-            // Update cached profile immediately so nav logic sees hasAccess=true before Firestore syncs
             if (effectiveProfile && effectiveUser) {
               const updated = { ...effectiveProfile, hasAccess: true };
               setCachedProfile(updated);
               try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updated)); } catch {}
             }
+            // Show team picker for new users before landing on dashboard
+            setShowTeamPicker(true);
             setCurrentScreen('dashboard');
           }}
-          onDismiss={() => setCurrentScreen('dashboard')} 
+          onDismiss={() => setCurrentScreen('dashboard')}
         />
       )}
       
@@ -427,6 +441,7 @@ export default function GamedayFlow() {
         <Settings
           profile={effectiveProfile}
           onBack={() => setCurrentScreen('dashboard')}
+          onChangeTeam={() => setShowTeamPicker(true)}
           onUpdateProfile={updateProfile}
         />
       )}
@@ -446,6 +461,19 @@ export default function GamedayFlow() {
         <Fixtures
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
+        />
+      )}
+
+      {/* Team picker overlay — shown after paywall (new users) or once for existing users */}
+      {showTeamPicker && !showPatchNotes && (
+        <TeamPicker
+          title="Pick Your Team"
+          subtitle="Find your club and select the team you play for"
+          onSave={() => setShowTeamPicker(false)}
+          onSkip={() => {
+            setShowTeamPicker(false);
+            try { localStorage.setItem('gameday_team_picker_skipped', '1'); } catch {}
+          }}
         />
       )}
 

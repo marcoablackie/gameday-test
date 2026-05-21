@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { ChevronLeft, LogOut, User, Ruler, Clock } from 'lucide-react';
+import { ChevronLeft, LogOut, User, Ruler, Clock, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,13 +35,15 @@ const heightOptions = Array.from({ length: 25 }).map((_, i) => {
 const weightOptions = Array.from({ length: 41 }).map((_, i) => `${(i * 5) + 100} lbs`);
 const ageOptions = Array.from({ length: 14 }).map((_, i) => (i + 12).toString());
 
-export default function Settings({ 
-  profile, 
-  onBack, 
+export default function Settings({
+  profile,
+  onBack,
+  onChangeTeam,
   onUpdateProfile
-}: { 
-  profile: UserProfile, 
-  onBack: () => void, 
+}: {
+  profile: UserProfile,
+  onBack: () => void,
+  onChangeTeam: () => void,
   onUpdateProfile: (data: Partial<UserProfile>) => void
 }) {
   const auth = useAuth();
@@ -179,8 +181,15 @@ export default function Settings({
           </div>
 
           <div className="pt-10 border-t border-white/5 flex flex-col gap-4">
-             <Button 
-               variant="destructive" 
+             <Button
+               variant="outline"
+               className="h-14 rounded-xl border-white/10 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/5"
+               onClick={onChangeTeam}
+             >
+               <Shield size={16} /> Change My Team
+             </Button>
+             <Button
+               variant="destructive"
                className="h-14 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"
                onClick={handleLogout}
              >

@@ -1,6 +1,16 @@
-export const CURRENT_VERSION = '1.2.0';
+export const CURRENT_VERSION = '1.3.0';
 
 export const PATCH_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.3.0',
+    date: 'May 2026',
+    changes: [
+      'Team selection — pick your exact team within your club (e.g. U14 Div 3)',
+      'Next game card now shows your specific team\'s fixture, not the whole club',
+      'New users guided through team selection after sign-up',
+      'Change Team option added to Settings',
+    ],
+  },
   {
     version: '1.2.0',
     date: 'May 2026',

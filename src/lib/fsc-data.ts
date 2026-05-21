@@ -88,6 +88,38 @@ export function parseTeamName(
   return { clubName: name, grade: '' };
 }
 
+// ─── Team discovery within a club ────────────────────────────────────────────
+
+export type TeamEntry = { gradeKey: string; displayGrade: string; count: number };
+
+export function teamsForClub(
+  fixtures: FSCFixture[],
+  clubName: string,
+  allClubs: FSCClub[]
+): TeamEntry[] {
+  const q = clubName.toLowerCase();
+  const countMap = new Map<string, number>();
+  const displayMap = new Map<string, string>();
+
+  for (const f of fixtures) {
+    for (const team of [f.homeTeam, f.awayTeam]) {
+      const name = team.name ?? '';
+      if (!name.toLowerCase().startsWith(q)) continue;
+      const { grade } = parseTeamName(name, allClubs);
+      if (!grade) continue;
+      // Normalise: strip trailing Male / Female for dedup key
+      const key = grade.replace(/\s+(Male|Female)$/i, '').trim().toLowerCase();
+      const display = grade.replace(/\s+(Male|Female)$/i, '').trim();
+      countMap.set(key, (countMap.get(key) ?? 0) + 1);
+      if (!displayMap.has(key)) displayMap.set(key, display);
+    }
+  }
+
+  return Array.from(countMap.entries())
+    .map(([key, count]) => ({ gradeKey: key, displayGrade: displayMap.get(key) ?? key, count }))
+    .sort((a, b) => a.displayGrade.localeCompare(b.displayGrade));
+}
+
 // ─── Fixture filtering & grouping ────────────────────────────────────────────
 
 export function fixturesForClub(fixtures: FSCFixture[], clubName: string): FSCFixture[] {
@@ -98,6 +130,51 @@ export function fixturesForClub(fixtures: FSCFixture[], clubName: string): FSCFi
       (f.awayTeam.name ?? '').toLowerCase().includes(q)
     )
     .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
+}
+
+export function fixturesForTeam(
+  fixtures: FSCFixture[],
+  clubName: string,
+  gradeKey: string,
+  allClubs: FSCClub[]
+): FSCFixture[] {
+  const q = clubName.toLowerCase();
+  return fixtures
+    .filter(f => {
+      for (const team of [f.homeTeam, f.awayTeam]) {
+        const name = team.name ?? '';
+        if (!name.toLowerCase().startsWith(q)) continue;
+        const { grade } = parseTeamName(name, allClubs);
+        const key = grade.replace(/\s+(Male|Female)$/i, '').trim().toLowerCase();
+        if (key === gradeKey) return true;
+      }
+      return false;
+    })
+    .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
+}
+
+export type SavedTeam = {
+  clubId: string;
+  clubName: string;
+  clubLogo: string;
+  gradeKey: string;
+  displayGrade: string;
+};
+
+export function getSavedTeam(): SavedTeam | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('gameday_my_team');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function saveTeam(team: SavedTeam) {
+  try {
+    localStorage.setItem('gameday_my_team', JSON.stringify(team));
+    // Keep legacy key in sync so old code still works
+    localStorage.setItem('gameday_my_club', JSON.stringify({ id: team.clubId, name: team.clubName, logo: team.clubLogo }));
+  } catch {}
 }
 
 export type FixtureGroup = { dateKey: string; dayLabel: string; fixtures: FSCFixture[] };

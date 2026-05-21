@@ -12,7 +12,7 @@ import { getDocViaRest } from '@/firebase/firestore/rest-fetch';
 import { setDocViaRest } from '@/firebase/firestore/rest-write';
 import { cn } from '@/lib/utils';
 import type { UserProfile, ScreenState } from '../GamedayFlow';
-import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, type FSCFixture, type FSCData } from '@/lib/fsc-data';
+import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, getSavedTeam, fixturesForTeam, type FSCFixture, type FSCData } from '@/lib/fsc-data';
 
 function formatTo12h(time24: string) {
   if (!time24) return "";
@@ -28,16 +28,17 @@ function formatTo12h(time24: string) {
 
 type NextGame = FSCFixture & { isHome: boolean; opponentName: string; opponentLogo: string };
 
-function findNextGame(data: FSCData, clubName: string): NextGame | null {
+function findNextGame(data: FSCData, clubName: string, gradeKey?: string): NextGame | null {
   const now = new Date();
   const q = clubName.toLowerCase();
-  const upcoming = data.fixtures
-    .filter(f => {
-      const local = parseMatchDate(f.matchDate);
-      return local >= now &&
-        ((f.homeTeam.name ?? '').toLowerCase().includes(q) ||
-         (f.awayTeam.name ?? '').toLowerCase().includes(q));
-    })
+  const pool = gradeKey
+    ? fixturesForTeam(data.fixtures, clubName, gradeKey, data.clubs)
+    : data.fixtures.filter(f =>
+        (f.homeTeam.name ?? '').toLowerCase().includes(q) ||
+        (f.awayTeam.name ?? '').toLowerCase().includes(q)
+      );
+  const upcoming = pool
+    .filter(f => parseMatchDate(f.matchDate) >= now)
     .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
   if (!upcoming[0]) return null;
   const f = upcoming[0];
@@ -76,12 +77,18 @@ export default function Dashboard({
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('gameday_my_club');
-      if (saved) {
-        const club = JSON.parse(saved);
-        setMyClub(club);
-        // Load FSC data (shared singleton — no duplicate fetches)
-        loadFSCData().then(data => setNextGame(findNextGame(data, club.name))).catch(() => {});
+      // Prefer team-level selection; fall back to club-only legacy key
+      const team = getSavedTeam();
+      if (team) {
+        setMyClub({ id: team.clubId, name: team.clubName, logo: team.clubLogo });
+        loadFSCData().then(data => setNextGame(findNextGame(data, team.clubName, team.gradeKey))).catch(() => {});
+      } else {
+        const raw = localStorage.getItem('gameday_my_club');
+        if (raw) {
+          const club = JSON.parse(raw);
+          setMyClub(club);
+          loadFSCData().then(data => setNextGame(findNextGame(data, club.name))).catch(() => {});
+        }
       }
     } catch {}
   }, []);
