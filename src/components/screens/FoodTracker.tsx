@@ -59,15 +59,20 @@ export default function FoodTracker({
     }
   };
 
+  const compressToDataUri = (src: HTMLVideoElement | HTMLImageElement, maxDim = 900): string => {
+    const canvas = canvasRef.current!;
+    const iw = src instanceof HTMLVideoElement ? src.videoWidth : src.naturalWidth;
+    const ih = src instanceof HTMLVideoElement ? src.videoHeight : src.naturalHeight;
+    const scale = Math.min(1, maxDim / Math.max(iw, ih, 1));
+    canvas.width = Math.round(iw * scale);
+    canvas.height = Math.round(ih * scale);
+    canvas.getContext('2d')!.drawImage(src, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.75);
+  };
+
   const capture = () => {
     if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0);
-        processPhoto(canvasRef.current.toDataURL('image/jpeg'));
-      }
+      processPhoto(compressToDataUri(videoRef.current));
     }
   };
 
@@ -84,18 +89,23 @@ export default function FoodTracker({
       setResult(data);
     } catch (err: any) {
       console.error("Food photo analysis failed:", err);
-      setError("Analysis failed. Try again with a clearer photo.");
+      setError("Analysis failed. Please try again.");
     } finally {
       setAnalyzing(false);
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => processPhoto(reader.result as string);
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    const img = document.createElement('img');
+    img.onload = () => {
+      if (!canvasRef.current) return;
+      processPhoto(compressToDataUri(img));
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
   };
 
   const handleLog = () => {

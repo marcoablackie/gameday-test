@@ -227,16 +227,22 @@ export default function GamedayFlow() {
       const { name: clubName } = JSON.parse(myClubRaw);
       const debriefedIds: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
       const now = new Date();
-      import('@/lib/fsc-data').then(({ loadFSCData, parseMatchDate }) => {
-        loadFSCData().then(({ fixtures }) => {
+      import('@/lib/fsc-data').then(({ loadFSCData, parseMatchDate, getSavedTeam: getTeam, fixturesForTeam }) => {
+        loadFSCData().then(({ fixtures, clubs }) => {
           const q = clubName.toLowerCase();
-          const past = fixtures
-            .filter(f =>
-              parseMatchDate(f.matchDate) < now &&
-              ((f.homeTeam.name ?? '').toLowerCase().includes(q) ||
-               (f.awayTeam.name ?? '').toLowerCase().includes(q)) &&
-              !debriefedIds.includes(f.id)
-            )
+          const cutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+          const savedTeam = getTeam();
+          let candidates = savedTeam
+            ? fixturesForTeam(fixtures, savedTeam.clubName, savedTeam.gradeKey, clubs)
+            : fixtures.filter(f =>
+                (f.homeTeam.name ?? '').toLowerCase().includes(q) ||
+                (f.awayTeam.name ?? '').toLowerCase().includes(q)
+              );
+          const past = candidates
+            .filter(f => {
+              const t = parseMatchDate(f.matchDate);
+              return t < now && t >= cutoff && !debriefedIds.includes(f.id);
+            })
             .sort((a, b) => b.matchDate.localeCompare(a.matchDate))[0];
           if (past) setPendingDebriefFixtureId(past.id);
         });
