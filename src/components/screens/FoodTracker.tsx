@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Camera, Loader2, CheckCircle2, Home, Dumbbell, BarChart2, AlertCircle, Plus, Zap, Scan, RefreshCw } from 'lucide-react';
-import { analyzeFoodPhoto, type AnalyzeFoodOutput } from '@/ai/flows/analyze-food-photo';
+import type { AnalyzeFoodOutput } from '@/ai/flows/analyze-food-photo';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import type { ScreenState, DailyStats } from '../GamedayFlow';
@@ -85,8 +85,15 @@ export default function FoodTracker({
     stopCamera();
 
     try {
-      const data = await analyzeFoodPhoto({ photoDataUri: base64 });
-      setResult(data);
+      const res = await fetch('/api/analyze-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoDataUri: base64 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResult(data as AnalyzeFoodOutput);
     } catch (err: any) {
       console.error("Food photo analysis failed:", err);
       setError("Analysis failed. Please try again.");
