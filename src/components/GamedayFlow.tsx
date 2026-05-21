@@ -17,7 +17,7 @@ import Fixtures from './screens/Fixtures';
 import PatchNotes from './PatchNotes';
 import PostGameDebrief from './PostGameDebrief';
 import TeamPicker from './TeamPicker';
-import { getSavedTeam } from '@/lib/fsc-data';
+import { getSavedTeam, saveTeam, type SavedTeam } from '@/lib/fsc-data';
 import type { GameDebrief } from './PostGameDebrief';
 import { CURRENT_VERSION } from '@/lib/patch-notes';
 import AuthScreen from './auth/AuthScreen';
@@ -54,6 +54,7 @@ export type UserProfile = {
   age?: string;
   uid: string;
   email: string;
+  myTeam?: SavedTeam | null;
 };
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';
@@ -207,6 +208,13 @@ export default function GamedayFlow() {
       if (seen !== CURRENT_VERSION) setShowPatchNotes(true);
     } catch {}
   }, [effectiveProfile]);
+
+  // Sync team from Firestore to localStorage on new device login
+  useEffect(() => {
+    if (!effectiveProfile?.myTeam) return;
+    if (getSavedTeam()) return; // local already set, don't overwrite
+    saveTeam(effectiveProfile.myTeam);
+  }, [effectiveProfile?.myTeam]);
 
   // Team picker: show once for onboarded users who haven't picked a team yet
   useEffect(() => {
@@ -475,7 +483,10 @@ export default function GamedayFlow() {
         <TeamPicker
           title="Pick Your Team"
           subtitle="Find your club and select the team you play for"
-          onSave={() => setShowTeamPicker(false)}
+          onSave={(team) => {
+            updateProfile({ myTeam: team });
+            setShowTeamPicker(false);
+          }}
           onSkip={() => {
             setShowTeamPicker(false);
             try { localStorage.setItem('gameday_team_picker_skipped', '1'); } catch {}

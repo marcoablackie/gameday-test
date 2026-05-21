@@ -37,7 +37,7 @@ Return ONLY a JSON object with exactly these fields — no markdown, no extra te
 }
 Rules: athlete portion sizes (larger than average). Sum all visible items. If not food, use foodName "Unknown" with all zeros.`,
             },
-            { inline_data: { mime_type: mimeType, data: base64Data } },
+            { inlineData: { mimeType: mimeType, data: base64Data } },
           ],
         }],
         generationConfig: { temperature: 0.3 },

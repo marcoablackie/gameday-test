@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Search, X, ChevronRight, Star, Loader2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { loadFSCData, teamsForClub, getSavedTeam, saveTeam, type FSCClub, type TeamEntry, type FSCData } from '@/lib/fsc-data';
+import { loadFSCData, teamsForClub, getSavedTeam, saveTeam, type FSCClub, type TeamEntry, type FSCData, type SavedTeam } from '@/lib/fsc-data';
 import { Button } from '@/components/ui/button';
 
 type Props = {
-  onSave: () => void;
+  onSave: (team: SavedTeam) => void;
   onSkip?: () => void;
   title?: string;
   subtitle?: string;
@@ -39,8 +39,9 @@ export default function TeamPicker({ onSave, onSkip, title = "Pick Your Team", s
 
   const handleSave = () => {
     if (!selectedClub || !selectedTeam) return;
-    saveTeam({ clubId: selectedClub.id, clubName: selectedClub.name, clubLogo: selectedClub.logo, gradeKey: selectedTeam.gradeKey, displayGrade: selectedTeam.displayGrade });
-    onSave();
+    const team: SavedTeam = { clubId: selectedClub.id, clubName: selectedClub.name, clubLogo: selectedClub.logo, gradeKey: selectedTeam.gradeKey, displayGrade: selectedTeam.displayGrade };
+    saveTeam(team);
+    onSave(team);
   };
 
   return (
