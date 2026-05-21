@@ -1,0 +1,22 @@
+{
+  "placeholderImages": [
+    {
+      "id": "pro-athlete-card",
+      "description": "Premium stylized pro player card with neon glow",
+      "imageUrl": "https://picsum.photos/seed/procard/600/800",
+      "imageHint": "athlete portrait"
+    },
+    {
+      "id": "drill-video-thumbnail",
+      "description": "First person POV of basketball training at the rim",
+      "imageUrl": "https://picsum.photos/seed/basketball/1200/675",
+      "imageHint": "basketball court"
+    },
+    {
+      "id": "user-avatar",
+      "description": "Profile picture for professional athlete",
+      "imageUrl": "https://picsum.photos/seed/avatar1/100/100",
+      "imageHint": "person profile"
+    }
+  ]
+}
