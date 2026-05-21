@@ -48,7 +48,7 @@ Rules: athlete portion sizes (larger than average). Sum all visible items. If no
   if (!geminiRes.ok) {
     const errText = await geminiRes.text();
     console.error('Gemini API error:', geminiRes.status, errText);
-    return NextResponse.json({ error: 'Gemini API error' }, { status: 502 });
+    return NextResponse.json({ error: `Gemini ${geminiRes.status}: ${errText.slice(0, 300)}` }, { status: 502 });
   }
 
   const geminiData = await geminiRes.json();

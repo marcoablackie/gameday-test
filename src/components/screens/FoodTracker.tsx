@@ -96,7 +96,7 @@ export default function FoodTracker({
       setResult(data as AnalyzeFoodOutput);
     } catch (err: any) {
       console.error("Food photo analysis failed:", err);
-      setError("Analysis failed. Please try again.");
+      setError(err?.message || "Analysis failed. Please try again.");
     } finally {
       setAnalyzing(false);
     }
