@@ -12,7 +12,7 @@ import { getDocViaRest } from '@/firebase/firestore/rest-fetch';
 import { setDocViaRest } from '@/firebase/firestore/rest-write';
 import { cn } from '@/lib/utils';
 import type { UserProfile, ScreenState } from '../GamedayFlow';
-import fscData from '@/data/fsc_clean_season_database.json';
+import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, type FSCFixture, type FSCData } from '@/lib/fsc-data';
 
 function formatTo12h(time24: string) {
   if (!time24) return "";
@@ -26,32 +26,34 @@ function formatTo12h(time24: string) {
   return `${hour}:${min} ${ampm}`;
 }
 
-type FSCFixture = { id: string; matchDate: string; round: string; groundLocation: string; homeTeam: { name: string; logo: string; score: number | null }; awayTeam: { name: string; logo: string; score: number | null } };
+type NextGame = FSCFixture & { isHome: boolean; opponentName: string; opponentLogo: string };
 
-function getNextGameForClub(clubName: string): (FSCFixture & { isHome: boolean; opponentName: string; opponentLogo: string }) | null {
+function findNextGame(data: FSCData, clubName: string): NextGame | null {
   const now = new Date();
-  const cn = clubName.toLowerCase();
-  const upcoming = (fscData.fixtures as FSCFixture[])
+  const q = clubName.toLowerCase();
+  const upcoming = data.fixtures
     .filter(f => {
-      const gameDate = new Date(f.matchDate.replace('Z', ''));
-      return gameDate >= now && (f.homeTeam.name.toLowerCase().includes(cn) || f.awayTeam.name.toLowerCase().includes(cn));
+      const local = parseMatchDate(f.matchDate);
+      return local >= now &&
+        ((f.homeTeam.name ?? '').toLowerCase().includes(q) ||
+         (f.awayTeam.name ?? '').toLowerCase().includes(q));
     })
     .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
   if (!upcoming[0]) return null;
   const f = upcoming[0];
-  const isHome = f.homeTeam.name.toLowerCase().includes(cn);
+  const isHome = (f.homeTeam.name ?? '').toLowerCase().includes(q);
   return {
     ...f,
     isHome,
-    opponentName: isHome ? f.awayTeam.name : f.homeTeam.name,
+    opponentName: isHome ? (f.awayTeam.name ?? 'TBC') : (f.homeTeam.name ?? 'TBC'),
     opponentLogo: isHome ? f.awayTeam.logo : f.homeTeam.logo,
   };
 }
 
 function daysUntilDate(isoString: string) {
-  const gameDate = new Date(isoString.replace('Z', ''));
+  const local = parseMatchDate(isoString);
   const now = new Date();
-  const diff = gameDate.getTime() - now.getTime();
+  const diff = local.getTime() - now.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   if (days === 0) return { label: `${hours}h`, sub: 'until kickoff' };
@@ -70,18 +72,19 @@ export default function Dashboard({
 }) {
   const db = useFirestore();
   const [myClub, setMyClub] = useState<{ id: string; name: string; logo: string } | null>(null);
+  const [nextGame, setNextGame] = useState<NextGame | null>(null);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('gameday_my_club');
-      if (saved) setMyClub(JSON.parse(saved));
+      if (saved) {
+        const club = JSON.parse(saved);
+        setMyClub(club);
+        // Load FSC data (shared singleton — no duplicate fetches)
+        loadFSCData().then(data => setNextGame(findNextGame(data, club.name))).catch(() => {});
+      }
     } catch {}
   }, []);
-
-  const nextGame = useMemo(
-    () => (myClub ? getNextGameForClub(myClub.name) : null),
-    [myClub]
-  );
   const planCacheKey = `gameday_plan_${profile.uid}_${new Date().toISOString().split('T')[0]}`;
   const [plan, setPlan] = useState<GeneratePersonalizedTrainingPlanOutput | null>(() => {
     try {
@@ -243,11 +246,12 @@ export default function Dashboard({
         {/* Next game */}
         {nextGame && (() => {
           const countdown = daysUntilDate(nextGame.matchDate);
-          const gameDate = new Date(nextGame.matchDate.replace('Z', ''));
-          const dateLabel = gameDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-          const opponent = nextGame.opponentName.includes('  ')
+          const local = parseMatchDate(nextGame.matchDate);
+          const dateLabel = local.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+          const kickoff = formatKickoff(local);
+          const opponentClub = nextGame.opponentName.includes('  ')
             ? nextGame.opponentName.split('  ')[0].trim()
-            : nextGame.opponentName.split(' ').slice(0, -2).join(' ') || nextGame.opponentName;
+            : nextGame.opponentName;
           return (
             <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-white/8 p-5 flex items-center gap-4 active:scale-[0.98] transition-all">
               <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0">
@@ -256,16 +260,16 @@ export default function Dashboard({
               </div>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Next Game</p>
-                <p className="text-base font-headline font-black uppercase text-white leading-tight truncate">vs {opponent}</p>
+                <p className="text-base font-headline font-black uppercase text-white leading-tight truncate">vs {opponentClub}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
                     <Calendar size={8} />{dateLabel}
                   </div>
                   <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                    <MapPin size={8} />{nextGame.groundLocation}
+                    <Clock size={8} />{kickoff}
                   </div>
                   <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                    <Shield size={8} />{nextGame.isHome ? 'Home' : 'Away'}
+                    <MapPin size={8} />{nextGame.groundLocation}
                   </div>
                 </div>
               </div>

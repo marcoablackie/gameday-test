@@ -56,6 +56,32 @@ export type UserProfile = {
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';
 
+// Lazy-loads fixture data then renders the debrief modal
+function PendingDebriefLoader({ fixtureId, onSubmit, onSkip }: {
+  fixtureId: string;
+  onSubmit: (d: GameDebrief) => void;
+  onSkip: () => void;
+}) {
+  const [game, setGame] = React.useState<React.ComponentProps<typeof PostGameDebrief>['game'] | null>(null);
+  React.useEffect(() => {
+    import('@/lib/fsc-data').then(({ loadFSCData, parseMatchDate, formatKickoff }) => {
+      loadFSCData().then(({ fixtures }) => {
+        const f = fixtures.find(x => x.id === fixtureId);
+        if (!f) return;
+        let myClubName = '';
+        try { myClubName = JSON.parse(localStorage.getItem('gameday_my_club') || '{}').name?.toLowerCase() ?? ''; } catch {}
+        const isHome = (f.homeTeam.name ?? '').toLowerCase().includes(myClubName);
+        const opponentRaw = isHome ? (f.awayTeam.name ?? 'TBC') : (f.homeTeam.name ?? 'TBC');
+        const opponent = opponentRaw.includes('  ') ? opponentRaw.split('  ')[0].trim() : opponentRaw;
+        const local = parseMatchDate(f.matchDate);
+        setGame({ id: f.id, opponent, date: f.matchDate.split('T')[0], time: formatKickoff(local), venue: f.groundLocation, isHome, competition: f.leagueTierName });
+      });
+    });
+  }, [fixtureId]);
+  if (!game) return null;
+  return <PostGameDebrief game={game} onSubmit={onSubmit} onSkip={onSkip} />;
+}
+
 export default function GamedayFlow() {
   const { user: firebaseUser, loading: authLoading } = useUser();
   const db = useFirestore();
@@ -179,25 +205,29 @@ export default function GamedayFlow() {
     } catch {}
   }, [effectiveProfile]);
 
-  // Check for past fixtures needing a debrief (based on saved club + FSC JSON)
+  // Check for past fixtures needing a debrief (lazy-load FSC data)
   useEffect(() => {
     if (!effectiveProfile) return;
     try {
-      const myClub = localStorage.getItem('gameday_my_club');
-      if (!myClub) return;
-      const { name: clubName } = JSON.parse(myClub);
+      const myClubRaw = localStorage.getItem('gameday_my_club');
+      if (!myClubRaw) return;
+      const { name: clubName } = JSON.parse(myClubRaw);
       const debriefedIds: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
       const now = new Date();
-      const { fixtures } = require('@/data/fsc_clean_season_database.json');
-      const cn = clubName.toLowerCase();
-      const pastNeedingDebrief = (fixtures as any[])
-        .filter(f =>
-          new Date(f.matchDate.replace('Z', '')) < now &&
-          (f.homeTeam.name.toLowerCase().includes(cn) || f.awayTeam.name.toLowerCase().includes(cn)) &&
-          !debriefedIds.includes(f.id)
-        )
-        .sort((a: any, b: any) => b.matchDate.localeCompare(a.matchDate))[0];
-      if (pastNeedingDebrief) setPendingDebriefFixtureId(pastNeedingDebrief.id);
+      import('@/lib/fsc-data').then(({ loadFSCData, parseMatchDate }) => {
+        loadFSCData().then(({ fixtures }) => {
+          const q = clubName.toLowerCase();
+          const past = fixtures
+            .filter(f =>
+              parseMatchDate(f.matchDate) < now &&
+              ((f.homeTeam.name ?? '').toLowerCase().includes(q) ||
+               (f.awayTeam.name ?? '').toLowerCase().includes(q)) &&
+              !debriefedIds.includes(f.id)
+            )
+            .sort((a, b) => b.matchDate.localeCompare(a.matchDate))[0];
+          if (past) setPendingDebriefFixtureId(past.id);
+        });
+      });
     } catch {}
   }, [effectiveProfile]);
 
@@ -427,19 +457,14 @@ export default function GamedayFlow() {
         }} />
       )}
 
-      {/* Post-game debrief overlay */}
-      {pendingDebriefFixtureId && !showPatchNotes && (() => {
-        const { fixtures } = require('@/data/fsc_clean_season_database.json');
-        const fixture = (fixtures as any[]).find((f: any) => f.id === pendingDebriefFixtureId);
-        if (!fixture) return null;
-        const myClubRaw = localStorage.getItem('gameday_my_club');
-        const myClubName = myClubRaw ? JSON.parse(myClubRaw).name.toLowerCase() : '';
-        const isHome = fixture.homeTeam.name.toLowerCase().includes(myClubName);
-        const opponent = isHome ? fixture.awayTeam.name : fixture.homeTeam.name;
-        const opponentClean = opponent.includes('  ') ? opponent.split('  ')[0].trim() : opponent;
-        const game = { id: fixture.id, opponent: opponentClean, date: fixture.matchDate.split('T')[0], time: fixture.matchDate.split('T')[1]?.slice(0,5) || '00:00', venue: fixture.groundLocation, isHome, competition: fixture.leagueTierName };
-        return <PostGameDebrief game={game} onSubmit={saveDebrief} onSkip={() => setPendingDebriefFixtureId(null)} />;
-      })()}
+      {/* Post-game debrief overlay — rendered via separate state to avoid require() */}
+      {pendingDebriefFixtureId && !showPatchNotes && (
+        <PendingDebriefLoader
+          fixtureId={pendingDebriefFixtureId}
+          onSubmit={saveDebrief}
+          onSkip={() => setPendingDebriefFixtureId(null)}
+        />
+      )}
     </div>
   );
 }
