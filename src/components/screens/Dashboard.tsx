@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, Circle, XCircle } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, Circle, XCircle, Zap } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
@@ -384,22 +384,22 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div className="sticky bottom-0 left-0 right-0 h-24 glass-nav flex items-center justify-around px-4 pb-4 z-30">
-        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-1 text-white">
-          <div className="h-0.5 w-6 bg-primary rounded-full mb-1" />
-          <Home size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Schedule</span>
+      <div className="sticky bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">
+        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-2 text-white">
+          <div className="h-1 w-8 bg-primary rounded-full mb-1" />
+          <Home size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Daily</span>
         </button>
-        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
-          <Dumbbell size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Drills</span>
+        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
+          <Dumbbell size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Drills</span>
         </button>
-        <button onClick={() => onNavClick('fixtures')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
-          <Calendar size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Games</span>
+        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
+          <Zap size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Bonus</span>
         </button>
-        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
-          <Camera size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Scanner</span>
+        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
+          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
         </button>
-        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-1 text-white/30 hover:text-white transition-colors">
-          <BarChart2 size={18} /> <span className="text-[7px] font-bold uppercase tracking-widest">Stats</span>
+        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
+          <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
         </button>
       </div>
     </div>

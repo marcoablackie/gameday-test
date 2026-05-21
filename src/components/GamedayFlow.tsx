@@ -140,12 +140,6 @@ export default function GamedayFlow() {
   const effectiveProfile = profile || cachedProfile;
 
   useEffect(() => {
-    console.log("GamedayFlow state check", { 
-      authLoading, 
-      profileLoading, 
-      hasEffectiveUser: !!effectiveUser,
-      profile: profile 
-    });
     if (authLoading) return;
 
     if (!effectiveUser) {
@@ -171,7 +165,6 @@ export default function GamedayFlow() {
         } else if (!effectiveProfile.hasAccess && currentScreen !== 'paywall' && currentScreen !== 'onboarding' && currentScreen !== 'dashboard' && currentScreen !== 'settings') {
           setCurrentScreen('paywall');
         } else if (currentScreen === 'welcome' || currentScreen === 'auth' || currentScreen === 'onboarding') {
-          console.log("Profile found and onboarded, navigating to dashboard");
           setCurrentScreen('dashboard');
         }
       }

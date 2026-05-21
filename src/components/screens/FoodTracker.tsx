@@ -287,7 +287,7 @@ export default function FoodTracker({
         </button>
         <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white transition-colors">
           <div className="h-1 w-8 bg-primary rounded-full mb-1" />
-          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scanner</span>
+          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
         </button>
         <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
           <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
