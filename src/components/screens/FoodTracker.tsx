@@ -90,9 +90,8 @@ export default function FoodTracker({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ photoDataUri: base64 }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
       setResult(data as AnalyzeFoodOutput);
     } catch (err: any) {
       console.error("Food photo analysis failed:", err);
