@@ -3,6 +3,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Utensils, Clock, ShoppingCart, CheckCircle2 } from 'lucide-react';
+
+function parseSteps(intel: string): string[] {
+  const byNumber = intel.split(/(?<!\w)(?:\d+[.)]\s+|Step\s+\d+[.:]\s*)/i).filter(s => s.trim().length > 0);
+  if (byNumber.length > 1) return byNumber.map(s => s.trim());
+  return intel.split(/\.\s+(?=[A-Z])/).map(s => s.trim()).filter(s => s.length > 0);
+}
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore } from '@/firebase';
@@ -70,11 +76,14 @@ export default function MealDetail({
         </div>
 
         <div className="space-y-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary italic">Preparation Intel</p>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <p className="text-sm italic leading-relaxed text-white/80 whitespace-pre-wrap font-medium">
-              "{item.intel}"
-            </p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary italic">Preparation Steps</p>
+          <div className="space-y-2">
+            {parseSteps(item.intel).map((step, i) => (
+              <div key={i} className="flex items-start gap-4 bg-white/5 border border-white/8 rounded-2xl px-4 py-3.5">
+                <span className="text-primary font-black text-sm shrink-0 w-5 mt-0.5">{i + 1}.</span>
+                <p className="text-sm leading-relaxed text-white/80 font-medium">{step}</p>
+              </div>
+            ))}
           </div>
         </div>
 
