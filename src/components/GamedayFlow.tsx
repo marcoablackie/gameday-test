@@ -133,7 +133,7 @@ export default function GamedayFlow() {
   const [todayFoodLog, setTodayFoodLog] = useState<FoodEntry[]>(() => {
     try {
       const uid = typeof window !== 'undefined' ? (localStorage.getItem('gameday_last_uid') || '') : '';
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
       const stored = localStorage.getItem(`gameday_food_log_${uid}_${today}`);
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
@@ -141,14 +141,14 @@ export default function GamedayFlow() {
   const [waterLogged, setWaterLogged] = useState<number>(() => {
     try {
       const uid = typeof window !== 'undefined' ? (localStorage.getItem('gameday_last_uid') || '') : '';
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
       return parseInt(localStorage.getItem(`gameday_water_${uid}_${today}`) || '0');
     } catch { return 0; }
   });
 
   useEffect(() => {
     if (!effectiveUser) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
     try {
       localStorage.setItem('gameday_last_uid', effectiveUser.uid);
       const stored = localStorage.getItem(`gameday_profile_${effectiveUser.uid}`);
@@ -181,26 +181,32 @@ export default function GamedayFlow() {
 
   useEffect(() => {
     if (profile && effectiveUser) {
+      // Zero out stale stats before caching — prevents Firestore overwriting an already-reset session
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+      let p = profile;
+      if (p.dailyStatsDate !== today) {
+        p = { ...p, dailyStats: { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 }, dailyStatsDate: today };
+      }
       try {
-        localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(profile));
+        localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(p));
       } catch {}
-      setCachedProfile(profile);
+      setCachedProfile(p);
     }
   }, [profile, effectiveUser]);
 
   // cachedProfile is always at least as fresh as profile (includes optimistic updates)
   const effectiveProfile = cachedProfile || profile;
 
-  // Reset daily stats when the user opens the app on a new day
+  // Reset daily stats when the user opens the app on a new day (Sydney midnight)
   useEffect(() => {
     if (!effectiveProfile || !userRef || !effectiveUser) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
     if (effectiveProfile.dailyStatsDate === today) return;
     const zeroed = { ...effectiveProfile, dailyStats: { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 }, dailyStatsDate: today };
     setCachedProfile(zeroed);
     try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(zeroed)); } catch {}
     reliableUpdate({ 'dailyStats.calories': 0, 'dailyStats.protein': 0, 'dailyStats.carbs': 0, 'dailyStats.fats': 0, 'dailyStats.sugar': 0, dailyStatsDate: today }).catch(() => {});
-  }, [effectiveProfile?.uid]);
+  }, [effectiveProfile?.uid, effectiveProfile?.dailyStatsDate]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -367,7 +373,7 @@ export default function GamedayFlow() {
 
   const logMealStats = (stats: DailyStats, foodName?: string) => {
     if (!userRef || !effectiveProfile || !effectiveUser) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
     // Reset stats if it's a new day
     const isToday = effectiveProfile.dailyStatsDate === today;
@@ -424,7 +430,7 @@ export default function GamedayFlow() {
 
   const logWater = (ml: number) => {
     if (!effectiveUser) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
     const newTotal = waterLogged + ml;
     setWaterLogged(newTotal);
     try { localStorage.setItem(`gameday_water_${effectiveUser.uid}_${today}`, String(newTotal)); } catch {}
@@ -570,6 +576,8 @@ export default function GamedayFlow() {
           item={selectedActivity}
           onComplete={(t) => awardXP(25, t)}
           isCompleted={effectiveProfile.completedActivities.includes(selectedActivity.activity)}
+          sport={effectiveProfile.sport}
+          position={effectiveProfile.position}
         />
       )}
 

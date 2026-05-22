@@ -41,8 +41,14 @@ function findNextGame(data: FSCData, clubName: string, gradeKey?: string): NextG
         (f.homeTeam.name ?? '').toLowerCase().includes(q) ||
         (f.awayTeam.name ?? '').toLowerCase().includes(q)
       );
+  const todaySyd = now.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
   const upcoming = pool
-    .filter(f => parseMatchDate(f.matchDate) >= now)
+    .filter(f => {
+      const d = parseMatchDate(f.matchDate);
+      // Keep today's game even if kickoff has passed (match may still be in progress)
+      const dateSyd = d.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+      return dateSyd === todaySyd || d >= now;
+    })
     .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
   if (!upcoming[0]) return null;
   const f = upcoming[0];
@@ -59,6 +65,7 @@ function daysUntilDate(isoString: string) {
   const local = parseMatchDate(isoString);
   const now = new Date();
   const diff = local.getTime() - now.getTime();
+  if (diff <= 0) return { label: 'Today', sub: 'game day' };
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   if (days === 0) return { label: `${hours}h`, sub: 'until kickoff' };

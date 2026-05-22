@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Utensils, Clock, ShoppingCart, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Utensils, Clock, ShoppingCart, CheckCircle2, X, Loader2, ChevronRight } from 'lucide-react';
 
 function parseSteps(intel: string): string[] {
   const byNumber = intel.split(/(?<!\w)(?:\d+[.)]\s+|Step\s+\d+[.:]\s*)/i).filter(s => s.trim().length > 0);
@@ -20,20 +20,40 @@ const FEEDBACK_OPTIONS = [
   { key: 'hungry',  emoji: '😤', label: 'Hungry',   color: 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10' },
 ] as const;
 
+type AltMeal = {
+  name: string;
+  steps: string[];
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+};
+
 export default function MealDetail({
   onBack,
   item,
   onComplete,
   isCompleted,
+  sport,
+  position,
 }: {
   onBack: () => void;
   item: { activity: string; intel: string; ingredients?: string[] };
   onComplete: (name: string) => void;
   isCompleted: boolean;
+  sport?: string;
+  position?: string;
 }) {
   const [feedbackGiven, setFeedbackGiven] = useState<string | null>(null);
   const { user } = useUser();
   const db = useFirestore();
+
+  // "Can't make this?" flow
+  const [showCantHave, setShowCantHave] = useState(false);
+  const [cantReason, setCantReason] = useState<'ingredients' | null>(null);
+  const [availIngredients, setAvailIngredients] = useState('');
+  const [altMeal, setAltMeal] = useState<AltMeal | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const handleFeedback = async (key: string) => {
     setFeedbackGiven(key);
@@ -45,6 +65,34 @@ export default function MealDetail({
       { [item.activity]: { feeling: key, timestamp: new Date().toISOString() } },
       { merge: true },
     ).catch(console.error);
+  };
+
+  const generateAlt = async () => {
+    if (!availIngredients.trim()) return;
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/alt-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients: availIngredients,
+          mealName: item.activity,
+          sport,
+          position,
+        }),
+      });
+      const data = await res.json();
+      if (!data.error) setAltMeal(data);
+    } catch {}
+    setGenerating(false);
+  };
+
+  const resetCantHave = () => {
+    setShowCantHave(false);
+    setCantReason(null);
+    setAvailIngredients('');
+    setAltMeal(null);
+    setGenerating(false);
   };
 
   return (
@@ -142,7 +190,104 @@ export default function MealDetail({
         >
           {isCompleted ? <><CheckCircle2 size={20} className="mr-2" /> Logged</> : 'Log Fuel Intake'}
         </Button>
+
+        {!isCompleted && (
+          <button
+            onClick={() => setShowCantHave(true)}
+            className="w-full h-11 rounded-xl border border-white/15 text-[11px] font-black uppercase tracking-widest text-white/50 hover:border-white/30 hover:text-white/70 transition-all active:scale-95"
+          >
+            Can&apos;t make this?
+          </button>
+        )}
       </div>
+
+      {/* Bottom sheet overlay */}
+      {showCantHave && (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={resetCantHave} />
+          <div className="relative bg-background border-t border-white/10 rounded-t-3xl px-6 pt-6 pb-10 space-y-5 animate-in slide-in-from-bottom-8 duration-300">
+
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-black uppercase italic tracking-widest">Why couldn&apos;t you have this?</h4>
+              <button onClick={resetCantHave} className="p-2 rounded-full bg-white/5 active:scale-90 transition-all">
+                <X size={16} />
+              </button>
+            </div>
+
+            {!cantReason && (
+              <button
+                onClick={() => setCantReason('ingredients')}
+                className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-4 active:scale-[0.98] transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🥫</span>
+                  <span className="text-sm font-black uppercase italic tracking-wider">Didn&apos;t have the ingredients</span>
+                </div>
+                <ChevronRight size={16} className="text-white/30" />
+              </button>
+            )}
+
+            {cantReason === 'ingredients' && !altMeal && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                  What do you have available?
+                </p>
+                <textarea
+                  value={availIngredients}
+                  onChange={e => setAvailIngredients(e.target.value)}
+                  placeholder="e.g. eggs, bread, banana, peanut butter..."
+                  rows={3}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-primary/50 font-medium"
+                />
+                <Button
+                  onClick={generateAlt}
+                  disabled={!availIngredients.trim() || generating}
+                  className="w-full h-12 rounded-xl font-black uppercase italic bg-primary text-primary-foreground neon-glow disabled:opacity-40"
+                >
+                  {generating ? (
+                    <><Loader2 size={16} className="mr-2 animate-spin" /> Generating...</>
+                  ) : (
+                    <>Make Me Something <ChevronRight size={16} className="ml-1" /></>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {altMeal && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary italic">Your Alternative</p>
+                  <div className="flex gap-2 text-[9px] font-black uppercase tracking-wider text-white/30">
+                    <span>{altMeal.kcal}kcal</span>
+                    <span>·</span>
+                    <span>{altMeal.protein}g P</span>
+                    <span>·</span>
+                    <span>{altMeal.carbs}g C</span>
+                  </div>
+                </div>
+
+                <h5 className="text-lg font-headline font-black italic uppercase tracking-tight">{altMeal.name}</h5>
+
+                <div className="space-y-2">
+                  {altMeal.steps.map((step, i) => (
+                    <div key={i} className="flex items-start gap-3 bg-white/5 border border-white/8 rounded-2xl px-4 py-3">
+                      <span className="text-primary font-black text-sm shrink-0 w-5 mt-0.5">{i + 1}.</span>
+                      <p className="text-sm leading-relaxed text-white/80 font-medium">{step}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  onClick={() => { onComplete(altMeal.name); resetCantHave(); }}
+                  className="w-full h-12 rounded-xl font-black uppercase italic bg-primary text-primary-foreground neon-glow"
+                >
+                  <CheckCircle2 size={16} className="mr-2" /> Had This Instead
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
