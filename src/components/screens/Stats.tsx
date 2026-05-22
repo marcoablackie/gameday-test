@@ -55,11 +55,15 @@ export default function Stats({
   onBack,
   onNavClick,
   todayFoodLog = [],
+  waterLogged = 0,
+  onAddWater,
 }: {
   profile: UserProfile,
   onBack: () => void,
   onNavClick: (screen: ScreenState) => void,
   todayFoodLog?: FoodEntry[],
+  waterLogged?: number,
+  onAddWater?: (ml: number) => void,
 }) {
   const xp = profile.xp ?? 0;
   const currentRank = getRank(xp);
@@ -71,18 +75,8 @@ export default function Stats({
 
   const today = new Date().toISOString().split('T')[0];
 
-  const [waterLogged, setWaterLogged] = useState<number>(() => {
-    try { return parseInt(localStorage.getItem(`gameday_water_${profile.uid}_${today}`) || '0'); }
-    catch { return 0; }
-  });
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherInput, setOtherInput] = useState('');
-
-  const addWater = (ml: number) => {
-    const next = waterLogged + ml;
-    setWaterLogged(next);
-    try { localStorage.setItem(`gameday_water_${profile.uid}_${today}`, String(next)); } catch {}
-  };
 
   // Belt-and-suspenders: also read food log directly from localStorage on mount
   const [localFoodLog] = useState<FoodEntry[]>(() => {
@@ -231,7 +225,7 @@ export default function Stats({
               {[200, 500, 600, 1000, 2000].map(ml => (
                 <button
                   key={ml}
-                  onClick={() => addWater(ml)}
+                  onClick={() => onAddWater?.(ml)}
                   className="px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 active:scale-95 transition-all"
                 >
                   +{ml >= 1000 ? `${ml / 1000}L` : `${ml}ml`}
@@ -256,7 +250,7 @@ export default function Stats({
                 <button
                   onClick={() => {
                     const ml = parseInt(otherInput);
-                    if (ml > 0) { addWater(ml); setOtherInput(''); setShowOtherInput(false); }
+                    if (ml > 0) { onAddWater?.(ml); setOtherInput(''); setShowOtherInput(false); }
                   }}
                   className="px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all"
                 >

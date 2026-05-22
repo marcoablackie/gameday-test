@@ -24,6 +24,7 @@ import AuthScreen from './auth/AuthScreen';
 import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { updateDocViaRest, setDocViaRest } from '@/firebase/firestore/rest-write';
+import { getDocViaRest } from '@/firebase/firestore/rest-fetch';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -50,6 +51,7 @@ export type UserProfile = {
   completedActivities: string[];
   skippedActivities?: string[];
   dailyStats: DailyStats;
+  dailyStatsDate?: string;
   height?: string;
   weight?: string;
   age?: string;
@@ -61,6 +63,7 @@ export type UserProfile = {
   proClubName?: string;
   trainingDays?: string[];
   trainingTime?: string;
+  debriefedFixtureIds?: string[];
 };
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';
@@ -135,19 +138,46 @@ export default function GamedayFlow() {
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   });
+  const [waterLogged, setWaterLogged] = useState<number>(() => {
+    try {
+      const uid = typeof window !== 'undefined' ? (localStorage.getItem('gameday_last_uid') || '') : '';
+      const today = new Date().toISOString().split('T')[0];
+      return parseInt(localStorage.getItem(`gameday_water_${uid}_${today}`) || '0');
+    } catch { return 0; }
+  });
 
   useEffect(() => {
     if (!effectiveUser) return;
+    const today = new Date().toISOString().split('T')[0];
     try {
       localStorage.setItem('gameday_last_uid', effectiveUser.uid);
       const stored = localStorage.getItem(`gameday_profile_${effectiveUser.uid}`);
       if (stored) setCachedProfile(JSON.parse(stored));
-      // Load today's food log now that we know the uid
-      const today = new Date().toISOString().split('T')[0];
+      // Load today's daily data from localStorage (fast, immediate)
       const logStored = localStorage.getItem(`gameday_food_log_${effectiveUser.uid}_${today}`);
       setTodayFoodLog(logStored ? JSON.parse(logStored) : []);
+      const waterStored = localStorage.getItem(`gameday_water_${effectiveUser.uid}_${today}`);
+      setWaterLogged(waterStored ? parseInt(waterStored) : 0);
     } catch {}
-  }, [effectiveUser?.uid]);
+
+    // Pull today's daily data from Firestore (syncs across devices)
+    if (db) {
+      const dailyRef = doc(db, 'users', effectiveUser.uid, 'daily', today);
+      getDocViaRest<{ foodLog: FoodEntry[]; waterMl: number }>(dailyRef)
+        .then(data => {
+          if (!data) return;
+          if (Array.isArray(data.foodLog) && data.foodLog.length > 0) {
+            setTodayFoodLog(data.foodLog);
+            try { localStorage.setItem(`gameday_food_log_${effectiveUser.uid}_${today}`, JSON.stringify(data.foodLog)); } catch {}
+          }
+          if (typeof data.waterMl === 'number' && data.waterMl > 0) {
+            setWaterLogged(data.waterMl);
+            try { localStorage.setItem(`gameday_water_${effectiveUser.uid}_${today}`, String(data.waterMl)); } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+  }, [effectiveUser?.uid, db]);
 
   useEffect(() => {
     if (profile && effectiveUser) {
@@ -160,6 +190,17 @@ export default function GamedayFlow() {
 
   // cachedProfile is always at least as fresh as profile (includes optimistic updates)
   const effectiveProfile = cachedProfile || profile;
+
+  // Reset daily stats when the user opens the app on a new day
+  useEffect(() => {
+    if (!effectiveProfile || !userRef || !effectiveUser) return;
+    const today = new Date().toISOString().split('T')[0];
+    if (effectiveProfile.dailyStatsDate === today) return;
+    const zeroed = { ...effectiveProfile, dailyStats: { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 }, dailyStatsDate: today };
+    setCachedProfile(zeroed);
+    try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(zeroed)); } catch {}
+    reliableUpdate({ 'dailyStats.calories': 0, 'dailyStats.protein': 0, 'dailyStats.carbs': 0, 'dailyStats.fats': 0, 'dailyStats.sugar': 0, dailyStatsDate: today }).catch(() => {});
+  }, [effectiveProfile?.uid]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -254,7 +295,8 @@ export default function GamedayFlow() {
       const myClubRaw = localStorage.getItem('gameday_my_club');
       if (!myClubRaw) return;
       const { name: clubName } = JSON.parse(myClubRaw);
-      const debriefedIds: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
+      const localIds: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
+      const debriefedIds: string[] = [...new Set([...localIds, ...(effectiveProfile?.debriefedFixtureIds || [])])];
       const now = new Date();
       import('@/lib/fsc-data').then(({ loadFSCData, parseMatchDate, getSavedTeam: getTeam, fixturesForTeam }) => {
         loadFSCData().then(({ fixtures, clubs }) => {
@@ -301,12 +343,15 @@ export default function GamedayFlow() {
   };
 
   const awardXP = (amount: number, activityId: string) => {
-    if (!userRef || !effectiveProfile) return;
+    if (!userRef || !effectiveProfile || !effectiveUser) return;
     if (effectiveProfile.completedActivities.includes(activityId)) return;
     const newXp = (effectiveProfile.xp || 0) + amount;
     const newLevel = Math.floor(newXp / 100) + 1;
     const newActivities = [...effectiveProfile.completedActivities, activityId];
     reliableUpdate({ xp: newXp, level: newLevel, completedActivities: newActivities }).catch(console.error);
+    const updated = { ...effectiveProfile, xp: newXp, level: newLevel, completedActivities: newActivities };
+    setCachedProfile(updated);
+    try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updated)); } catch {}
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
@@ -321,14 +366,20 @@ export default function GamedayFlow() {
   };
 
   const logMealStats = (stats: DailyStats, foodName?: string) => {
-    if (!userRef || !effectiveProfile) return;
-    const cur = effectiveProfile.dailyStats || { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 };
+    if (!userRef || !effectiveProfile || !effectiveUser) return;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Reset stats if it's a new day
+    const isToday = effectiveProfile.dailyStatsDate === today;
+    const cur = isToday ? (effectiveProfile.dailyStats || { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 })
+                        : { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 };
+
     const newStats: DailyStats = {
-      calories: (cur.calories || 0) + stats.calories,
-      protein:  (cur.protein  || 0) + stats.protein,
-      carbs:    (cur.carbs    || 0) + stats.carbs,
-      fats:     (cur.fats     || 0) + stats.fats,
-      sugar:    (cur.sugar    || 0) + stats.sugar,
+      calories: cur.calories + stats.calories,
+      protein:  cur.protein  + stats.protein,
+      carbs:    cur.carbs    + stats.carbs,
+      fats:     cur.fats     + stats.fats,
+      sugar:    cur.sugar    + stats.sugar,
     };
     reliableUpdate({
       'dailyStats.calories': newStats.calories,
@@ -336,16 +387,15 @@ export default function GamedayFlow() {
       'dailyStats.carbs':    newStats.carbs,
       'dailyStats.fats':     newStats.fats,
       'dailyStats.sugar':    newStats.sugar,
+      dailyStatsDate: today,
     }).catch(console.error);
-    // Update cache so Stats reflects it immediately
-    if (effectiveUser) {
-      const updated = { ...effectiveProfile, dailyStats: newStats };
-      setCachedProfile(updated);
-      try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updated)); } catch {}
-    }
-    // Persist food log for Stats "recent foods" display
-    if (foodName && effectiveUser) {
-      const today = new Date().toISOString().split('T')[0];
+
+    const updatedProfile = { ...effectiveProfile, dailyStats: newStats, dailyStatsDate: today };
+    setCachedProfile(updatedProfile);
+    try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updatedProfile)); } catch {}
+
+    // Persist food log locally + to Firestore
+    if (foodName) {
       const key = `gameday_food_log_${effectiveUser.uid}_${today}`;
       try {
         const existing: FoodEntry[] = JSON.parse(localStorage.getItem(key) || '[]');
@@ -358,21 +408,40 @@ export default function GamedayFlow() {
           sugar: stats.sugar,
           time: new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }),
         };
-        const updated = [...existing, newEntry];
-        localStorage.setItem(key, JSON.stringify(updated));
-        setTodayFoodLog(updated);
+        const updatedLog = [...existing, newEntry];
+        localStorage.setItem(key, JSON.stringify(updatedLog));
+        setTodayFoodLog(updatedLog);
+        // Sync to Firestore daily doc
+        if (db) {
+          const waterMl = parseInt(localStorage.getItem(`gameday_water_${effectiveUser.uid}_${today}`) || '0');
+          const dailyRef = doc(db, 'users', effectiveUser.uid, 'daily', today);
+          setDocViaRest(dailyRef, { foodLog: updatedLog, waterMl })
+            .catch(() => setDoc(dailyRef, { foodLog: updatedLog, waterMl }, { merge: true }).catch(() => {}));
+        }
       } catch {}
+    }
+  };
+
+  const logWater = (ml: number) => {
+    if (!effectiveUser) return;
+    const today = new Date().toISOString().split('T')[0];
+    const newTotal = waterLogged + ml;
+    setWaterLogged(newTotal);
+    try { localStorage.setItem(`gameday_water_${effectiveUser.uid}_${today}`, String(newTotal)); } catch {}
+    if (db) {
+      const foodLog = JSON.parse(localStorage.getItem(`gameday_food_log_${effectiveUser.uid}_${today}`) || '[]');
+      const dailyRef = doc(db, 'users', effectiveUser.uid, 'daily', today);
+      setDocViaRest(dailyRef, { foodLog, waterMl: newTotal })
+        .catch(() => setDoc(dailyRef, { foodLog, waterMl: newTotal }, { merge: true }).catch(() => {}));
     }
   };
 
   const saveDebrief = (debrief: GameDebrief) => {
     if (!pendingDebriefFixtureId) return;
-    try {
-      const existing: string[] = JSON.parse(localStorage.getItem('gameday_debriefed') || '[]');
-      localStorage.setItem('gameday_debriefed', JSON.stringify([...existing, pendingDebriefFixtureId]));
-    } catch {}
+    const newDebriefedIds = [...(effectiveProfile?.debriefedFixtureIds || []), pendingDebriefFixtureId];
+    try { localStorage.setItem('gameday_debriefed', JSON.stringify(newDebriefedIds)); } catch {}
     const feedback = `Post-game: ${debrief.result} ${debrief.goalsFor}-${debrief.goalsAgainst}. Went well: ${debrief.wentWell}. To improve: ${debrief.toImprove}. Rating: ${debrief.rating}/5.`;
-    updateProfile({ lastFeedback: feedback });
+    updateProfile({ lastFeedback: feedback, debriefedFixtureIds: newDebriefedIds });
     setPendingDebriefFixtureId(null);
   };
 
@@ -518,6 +587,8 @@ export default function GamedayFlow() {
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
           todayFoodLog={todayFoodLog}
+          waterLogged={waterLogged}
+          onAddWater={logWater}
         />
       )}
 
