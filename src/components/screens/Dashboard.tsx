@@ -167,25 +167,27 @@ export default function Dashboard({
       }
 
       const todayDayOfWeek = new Date().toLocaleDateString('en-AU', { weekday: 'short', timeZone: 'Australia/Sydney' });
+      const isWeekend = todayDayOfWeek === 'Sat' || todayDayOfWeek === 'Sun';
 
-      // Detect game day from cached FSC data (synchronous, no extra fetch)
+      // Detect game day using the same path as the fixtures UI (getSavedTeam + loadFSCData)
       let isGameDay = false;
       try {
-        const fscRaw = localStorage.getItem('gameday_fsc_data');
-        if (fscRaw) {
-          const { fixtures } = JSON.parse(fscRaw) as FSCData;
-          const teamRaw = localStorage.getItem('gameday_selected_team');
-          const clubRaw = localStorage.getItem('gameday_my_club');
-          const clubName = (teamRaw ? JSON.parse(teamRaw).clubName : JSON.parse(clubRaw || '{}').name || '').toLowerCase();
-          const todayStr = new Date().toDateString();
-          if (clubName) {
-            isGameDay = Array.isArray(fixtures) && fixtures.some(f =>
-              parseMatchDate(f.matchDate).toDateString() === todayStr &&
-              ((f.homeTeam.name ?? '').toLowerCase().includes(clubName) ||
-               (f.awayTeam.name ?? '').toLowerCase().includes(clubName))
+        const fscData = await loadFSCData();
+        const savedTeam = getSavedTeam();
+        const todayStr = new Date().toDateString();
+        let pool: FSCFixture[] = [];
+        if (savedTeam) {
+          pool = fixturesForTeam(fscData.fixtures, savedTeam.clubName, savedTeam.gradeKey, fscData.clubs);
+        } else {
+          try {
+            const q = (JSON.parse(localStorage.getItem('gameday_my_club') || '{}').name || '').toLowerCase();
+            if (q) pool = fscData.fixtures.filter(f =>
+              (f.homeTeam.name ?? '').toLowerCase().includes(q) ||
+              (f.awayTeam.name ?? '').toLowerCase().includes(q)
             );
-          }
+          } catch {}
         }
+        isGameDay = pool.some(f => parseMatchDate(f.matchDate).toDateString() === todayStr);
       } catch {}
 
       const result = await generatePersonalizedTrainingPlan({
@@ -202,6 +204,7 @@ export default function Dashboard({
         trainingDays: profile.trainingDays,
         trainingTime: profile.trainingTime,
         todayDayOfWeek,
+        isWeekend,
         isGameDay,
       });
 
