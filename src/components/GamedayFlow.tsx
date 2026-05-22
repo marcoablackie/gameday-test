@@ -142,7 +142,8 @@ export default function GamedayFlow() {
     }
   }, [profile, effectiveUser]);
 
-  const effectiveProfile = profile || cachedProfile;
+  // cachedProfile is always at least as fresh as profile (includes optimistic updates)
+  const effectiveProfile = cachedProfile || profile;
 
   useEffect(() => {
     if (authLoading) return;

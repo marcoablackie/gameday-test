@@ -21,14 +21,41 @@ export type FSCData = { associationName: string; clubs: FSCClub[]; fixtures: FSC
 let _cache: FSCData | null = null;
 let _promise: Promise<FSCData> | null = null;
 
+const LS_KEY = 'gameday_fsc_data';
+const LS_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 export function loadFSCData(): Promise<FSCData> {
   if (_cache) return Promise.resolve(_cache);
-  if (!_promise) {
-    _promise = fetch('/data/fsc_clean_season_database.json')
-      .then(r => r.json())
-      .then((d: FSCData) => { _cache = d; return d; });
-  }
+  if (!_promise) _promise = _load();
   return _promise;
+}
+
+async function _load(): Promise<FSCData> {
+  // 1. Check localStorage (24h TTL)
+  try {
+    const stored = localStorage.getItem(LS_KEY);
+    if (stored) {
+      const { data, ts } = JSON.parse(stored);
+      if (Date.now() - ts < LS_TTL) { _cache = data; return data; }
+    }
+  } catch {}
+
+  // 2. Live proxy (Vercel caches 6h server-side, so this is fast after first hit)
+  try {
+    const res = await fetch('/api/fsc-fixtures');
+    if (res.ok) {
+      const data: FSCData = await res.json();
+      _cache = data;
+      try { localStorage.setItem(LS_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
+      return data;
+    }
+  } catch {}
+
+  // 3. Static bundled fallback
+  const res = await fetch('/data/fsc_clean_season_database.json');
+  const data: FSCData = await res.json();
+  _cache = data;
+  return data;
 }
 
 // ─── Date / time ────────────────────────────────────────────────────────────
