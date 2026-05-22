@@ -9,7 +9,7 @@ export default function PatchNotes({ onDismiss }: { onDismiss: () => void }) {
   const latest = PATCH_NOTES[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-background border-t border-white/10 rounded-t-3xl p-6 space-y-5 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-start justify-between">
           <div className="space-y-1">

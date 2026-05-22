@@ -46,7 +46,7 @@ export default function PostGameDebrief({ game, onSubmit, onSkip }: Props) {
   const gameDate = new Date(game.date).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-background border-t border-white/10 rounded-t-3xl px-6 pt-6 pb-10 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
 
         {/* Header */}

@@ -45,7 +45,7 @@ export default function TeamPicker({ onSave, onSkip, title = "Pick Your Team", s
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background animate-in fade-in duration-300">
+    <div className="absolute inset-0 z-50 flex flex-col bg-background animate-in fade-in duration-300">
       {/* Header */}
       <div className="px-6 pt-14 pb-4 shrink-0">
         <div className="space-y-1 mb-5">
