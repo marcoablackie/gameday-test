@@ -62,9 +62,20 @@ async function _load(): Promise<FSCData> {
 
 const SYD = 'Australia/Sydney';
 
-// Returns the raw UTC Date — use for comparisons with new Date().
+// Dribl returns local Sydney times without a timezone offset when called with
+// timezone=Australia/Sydney — new Date() would misinterpret them as UTC.
+// Detect missing offset and append the correct AEST/AEDT offset so all
+// comparisons and formatting are correct.
 export function parseMatchDate(isoString: string): Date {
-  return new Date(isoString);
+  const s = isoString.replace(' ', 'T'); // handle "2026-05-24 09:30:00" format
+  if (!s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+    // No timezone indicator — treat as Sydney local time
+    const month = parseInt(s.slice(5, 7), 10);
+    // AEDT (UTC+11): October–March; AEST (UTC+10): April–September
+    const offset = (month >= 10 || month <= 3) ? '+11:00' : '+10:00';
+    return new Date(s + offset);
+  }
+  return new Date(s);
 }
 
 export function formatDayHeader(date: Date): string {
