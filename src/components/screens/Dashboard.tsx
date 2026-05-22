@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2 } from 'lucide-react';
 import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
 import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,26 +17,6 @@ import type { UserProfile, ScreenState } from '../GamedayFlow';
 import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, getSavedTeam, fixturesForTeam, type FSCFixture, type FSCData } from '@/lib/fsc-data';
 
 type Snack = { name: string; benefit: string; steps: string[]; kcal: number; protein: number; carbs: number; fats: number };
-
-const SNACKS: Snack[] = [
-  { name: 'PB Banana Rice Cakes', benefit: 'Quick energy + sustained fuel', steps: ['Spread 1 tbsp peanut butter on 2 rice cakes', 'Slice half a banana on top', 'Drizzle with a little honey'], kcal: 280, protein: 7, carbs: 42, fats: 9 },
-  { name: 'Greek Yogurt Honey Bowl', benefit: 'High protein + easy digestion', steps: ['Spoon ¾ cup Greek yogurt into a bowl', 'Drizzle with 1 tsp honey', 'Add a handful of granola or berries on top'], kcal: 220, protein: 18, carbs: 28, fats: 3 },
-  { name: 'Apple + Almond Butter', benefit: 'Slow carbs + healthy fats', steps: ['Slice one apple into wedges', 'Dip into 2 tbsp almond butter', 'Sprinkle a pinch of cinnamon if available'], kcal: 250, protein: 5, carbs: 35, fats: 11 },
-  { name: 'Banana Peanut Butter Toast', benefit: 'Pre-training carb load', steps: ['Toast 1 slice of bread', 'Spread 1 tbsp peanut butter', 'Layer sliced banana + a shake of cinnamon'], kcal: 260, protein: 8, carbs: 40, fats: 8 },
-  { name: 'Dates + Nut Butter', benefit: 'Instant energy spike', steps: ['Split 4–5 Medjool dates open', 'Stuff each with ½ tsp peanut or almond butter', 'Optional: add a tiny pinch of sea salt'], kcal: 290, protein: 5, carbs: 55, fats: 8 },
-  { name: 'Chocolate Milk', benefit: 'Post-workout recovery classic', steps: ['Pour 1 cup cold milk into a glass', 'Add 1 tbsp chocolate powder or syrup', 'Stir well and drink within 30 min of training'], kcal: 200, protein: 9, carbs: 30, fats: 5 },
-  { name: 'Mango Cottage Cheese', benefit: 'Protein hit + natural sweetness', steps: ['Spoon ¾ cup cottage cheese into a bowl', 'Top with ½ cup diced fresh or frozen mango', 'Drizzle with honey if desired'], kcal: 180, protein: 19, carbs: 22, fats: 2 },
-  { name: 'Honey Banana Oats', benefit: 'Slow-release energy', steps: ['Add ½ cup quick oats + water to a bowl', 'Microwave 90 seconds, stir well', 'Top with sliced banana and a drizzle of honey'], kcal: 300, protein: 8, carbs: 58, fats: 3 },
-  { name: 'Banana + Dark Chocolate', benefit: 'Natural sugar + antioxidants', steps: ['Peel a banana and break into chunks', 'Break 2–3 squares of dark chocolate (70%+)', 'Eat together — the combo is elite'], kcal: 180, protein: 2, carbs: 40, fats: 5 },
-  { name: 'Frozen Berry Yogurt Bark', benefit: 'Refreshing recovery treat', steps: ['Spread ¾ cup Greek yogurt thin on baking paper', 'Scatter frozen berries + a drizzle of honey', 'Freeze 1–2 hrs, break into pieces'], kcal: 150, protein: 12, carbs: 20, fats: 2 },
-  { name: 'No-Bake Energy Balls', benefit: 'Portable pre-game fuel', steps: ['Mix ½ cup oats + 2 tbsp peanut butter + 1 tbsp honey', 'Add a handful of dark choc chips', 'Roll into balls, refrigerate 20 min'], kcal: 240, protein: 6, carbs: 32, fats: 10 },
-  { name: 'Boiled Egg + Fruit', benefit: 'Protein + fast carbs combo', steps: ['Hard boil 1–2 eggs (7–8 min)', 'Peel and add salt/pepper', 'Pair with a banana or handful of grapes'], kcal: 220, protein: 14, carbs: 24, fats: 8 },
-];
-
-function pickSnack(current?: Snack): Snack {
-  const others = current ? SNACKS.filter(s => s.name !== current.name) : SNACKS;
-  return others[Math.floor(Math.random() * others.length)];
-}
 
 function formatTo12h(time24: string) {
   if (!time24) return "";
@@ -267,6 +247,27 @@ export default function Dashboard({
   };
 
   const [activeSnack, setActiveSnack] = useState<Snack | null>(null);
+  const [snackLoading, setSnackLoading] = useState(false);
+
+  const fetchSnack = async () => {
+    if (activeSnack) { setActiveSnack(null); return; }
+    setSnackLoading(true);
+    try {
+      const res = await fetch('/api/snack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sport: profile.sport,
+          position: profile.position,
+          weight: profile.weight,
+          caloriesLogged: profile.dailyStats?.calories ?? 0,
+        }),
+      });
+      const data = await res.json();
+      if (!data.error) setActiveSnack(data);
+    } catch {}
+    finally { setSnackLoading(false); }
+  };
 
   const rank = getRank(profile.xp ?? 0);
   const nextRank = getNextRank(profile.xp ?? 0);
@@ -377,7 +378,8 @@ export default function Dashboard({
             <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Timeline</h4>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setActiveSnack(s => s ? null : pickSnack())}
+                onClick={fetchSnack}
+                disabled={snackLoading}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
                   activeSnack
@@ -385,7 +387,7 @@ export default function Dashboard({
                     : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
                 )}
               >
-                <Apple size={10} />
+                {snackLoading ? <Loader2 size={10} className="animate-spin" /> : <Apple size={10} />}
                 Snack
               </button>
               <span className="text-[10px] font-bold text-white uppercase tracking-widest">{formatTo12h(currentTime)}</span>
@@ -423,10 +425,28 @@ export default function Dashboard({
                   <span className="text-white/30">{activeSnack.fats}g F</span>
                 </div>
                 <button
-                  onClick={() => setActiveSnack(s => pickSnack(s ?? undefined))}
-                  className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors"
+                  onClick={async () => {
+                    setSnackLoading(true);
+                    try {
+                      const res = await fetch('/api/snack', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          sport: profile.sport,
+                          position: profile.position,
+                          weight: profile.weight,
+                          caloriesLogged: profile.dailyStats?.calories ?? 0,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!data.error) setActiveSnack(data);
+                    } catch {}
+                    finally { setSnackLoading(false); }
+                  }}
+                  disabled={snackLoading}
+                  className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors disabled:opacity-40"
                 >
-                  <Shuffle size={10} />
+                  {snackLoading ? <Loader2 size={10} className="animate-spin" /> : <Shuffle size={10} />}
                   New
                 </button>
               </div>

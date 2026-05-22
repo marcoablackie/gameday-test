@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { Home, Dumbbell, BarChart2, ChevronLeft, Zap, Camera, Trophy, Flame, Ruler } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Home, Dumbbell, BarChart2, ChevronLeft, Zap, Camera, Trophy, Flame, Ruler, Droplets } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -41,14 +41,25 @@ function calcMacroTargets(profile: UserProfile) {
   return { calories, protein, carbs, fats, sugar, personalized: true };
 }
 
+function calcWaterTarget(profile: UserProfile) {
+  if (!profile.weight) return { ml: 2500, glasses: 10, personalized: false };
+  const weightKg = parseWeightLbs(profile.weight) * 0.453592;
+  const ml = Math.round(weightKg * 35 + 500);
+  return { ml, glasses: Math.round(ml / 250), personalized: true };
+}
+
+type FoodEntry = { name: string; calories: number; protein: number; carbs: number; fats: number; sugar: number; time: string };
+
 export default function Stats({
   profile,
   onBack,
-  onNavClick
+  onNavClick,
+  todayFoodLog = [],
 }: {
   profile: UserProfile,
   onBack: () => void,
-  onNavClick: (screen: ScreenState) => void
+  onNavClick: (screen: ScreenState) => void,
+  todayFoodLog?: FoodEntry[],
 }) {
   const xp = profile.xp ?? 0;
   const currentRank = getRank(xp);
@@ -56,17 +67,7 @@ export default function Stats({
   const rankProgress = getRankProgress(xp);
   const needsCalibration = !profile.height || !profile.weight || !profile.age;
   const targets = useMemo(() => calcMacroTargets(profile), [profile]);
-
-  type FoodEntry = { name: string; calories: number; protein: number; carbs: number; fats: number; sugar: number; time: string };
-  const [foodLog, setFoodLog] = useState<FoodEntry[]>([]);
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const key = `gameday_food_log_${profile.uid}_${today}`;
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored) setFoodLog(JSON.parse(stored));
-    } catch {}
-  }, [profile.uid]);
+  const water = useMemo(() => calcWaterTarget(profile), [profile]);
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden animate-in fade-in slide-in-from-right-10 duration-700">
@@ -178,6 +179,30 @@ export default function Stats({
           </div>
         </div>
 
+        {/* Water intake */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Hydration Target</h4>
+          </div>
+          <div className="bg-blue-500/5 border border-blue-500/15 rounded-3xl p-6 flex items-center gap-5">
+            <div className="h-12 w-12 rounded-2xl bg-blue-500/15 flex items-center justify-center shrink-0">
+              <Droplets size={24} className="text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-0.5">
+              <p className="text-[8px] font-black uppercase tracking-widest text-blue-400/60">
+                {water.personalized ? 'Personalized Target' : 'Default Target'}
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-headline font-black text-blue-400">{(water.ml / 1000).toFixed(1)}</span>
+                <span className="text-xs font-bold text-blue-400/60 uppercase tracking-widest">L / day</span>
+              </div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">
+                ≈ {water.glasses} glasses · {water.personalized ? `${profile.weight} bodyweight + training` : 'athlete default'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Today's intake — always visible */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 border-b border-white/5 pb-2">
@@ -217,13 +242,13 @@ export default function Stats({
         </div>
 
         {/* Recent scanned foods */}
-        {foodLog.length > 0 && (
+        {todayFoodLog.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-white/5 pb-2">
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Logged Foods Today</h4>
             </div>
             <div className="space-y-2">
-              {[...foodLog].reverse().map((food, i) => (
+              {[...todayFoodLog].reverse().map((food, i) => (
                 <div key={i} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate">{food.name}</p>

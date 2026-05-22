@@ -126,11 +126,26 @@ export default function GamedayFlow() {
   // Cache profile in localStorage so the app works when Firestore is slow/offline
   const [cachedProfile, setCachedProfile] = useState<UserProfile | null>(null);
 
+  type FoodEntry = { name: string; calories: number; protein: number; carbs: number; fats: number; sugar: number; time: string };
+  const [todayFoodLog, setTodayFoodLog] = useState<FoodEntry[]>(() => {
+    try {
+      const uid = typeof window !== 'undefined' ? (localStorage.getItem('gameday_last_uid') || '') : '';
+      const today = new Date().toISOString().split('T')[0];
+      const stored = localStorage.getItem(`gameday_food_log_${uid}_${today}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
   useEffect(() => {
     if (!effectiveUser) return;
     try {
+      localStorage.setItem('gameday_last_uid', effectiveUser.uid);
       const stored = localStorage.getItem(`gameday_profile_${effectiveUser.uid}`);
       if (stored) setCachedProfile(JSON.parse(stored));
+      // Load today's food log now that we know the uid
+      const today = new Date().toISOString().split('T')[0];
+      const logStored = localStorage.getItem(`gameday_food_log_${effectiveUser.uid}_${today}`);
+      setTodayFoodLog(logStored ? JSON.parse(logStored) : []);
     } catch {}
   }, [effectiveUser?.uid]);
 
@@ -333,8 +348,8 @@ export default function GamedayFlow() {
       const today = new Date().toISOString().split('T')[0];
       const key = `gameday_food_log_${effectiveUser.uid}_${today}`;
       try {
-        const existing = JSON.parse(localStorage.getItem(key) || '[]');
-        existing.push({
+        const existing: FoodEntry[] = JSON.parse(localStorage.getItem(key) || '[]');
+        const newEntry: FoodEntry = {
           name: foodName,
           calories: stats.calories,
           protein: stats.protein,
@@ -342,8 +357,10 @@ export default function GamedayFlow() {
           fats: stats.fats,
           sugar: stats.sugar,
           time: new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }),
-        });
-        localStorage.setItem(key, JSON.stringify(existing));
+        };
+        const updated = [...existing, newEntry];
+        localStorage.setItem(key, JSON.stringify(updated));
+        setTodayFoodLog(updated);
       } catch {}
     }
   };
@@ -499,6 +516,7 @@ export default function GamedayFlow() {
           profile={effectiveProfile}
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
+          todayFoodLog={todayFoodLog}
         />
       )}
 
