@@ -236,8 +236,13 @@ export default function Dashboard({
 
   const sortedSchedule = useMemo(() => {
     if (!plan) return [];
-    
-    const withMeta = plan.schedule.map((it) => ({
+
+    // Guarantee no school blocks on weekends regardless of what the AI/cache returned
+    const dayOfWeek = new Date().toLocaleDateString('en-AU', { weekday: 'short', timeZone: 'Australia/Sydney' });
+    const isWeekend = dayOfWeek === 'Sat' || dayOfWeek === 'Sun';
+    const schedule = isWeekend ? plan.schedule.filter(it => it.type !== 'school') : plan.schedule;
+
+    const withMeta = schedule.map((it) => ({
       ...it,
       isCompleted: profile.completedActivities?.includes(it.activity),
       isSkipped: profile.skippedActivities?.includes(it.activity),
