@@ -482,6 +482,7 @@ export default function GamedayFlow() {
           onNavClick={setCurrentScreen}
           onComplete={(id, type) => awardXP(type === 'training' ? 50 : 25, id)}
           onSkip={skipActivity}
+          onLogMeal={logMealStats}
         />
       )}
 

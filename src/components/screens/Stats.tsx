@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Home, Dumbbell, BarChart2, ChevronLeft, Zap, Camera, Trophy, Flame, Ruler, Droplets } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,30 @@ export default function Stats({
   const needsCalibration = !profile.height || !profile.weight || !profile.age;
   const targets = useMemo(() => calcMacroTargets(profile), [profile]);
   const water = useMemo(() => calcWaterTarget(profile), [profile]);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const [waterLogged, setWaterLogged] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem(`gameday_water_${profile.uid}_${today}`) || '0'); }
+    catch { return 0; }
+  });
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherInput, setOtherInput] = useState('');
+
+  const addWater = (ml: number) => {
+    const next = waterLogged + ml;
+    setWaterLogged(next);
+    try { localStorage.setItem(`gameday_water_${profile.uid}_${today}`, String(next)); } catch {}
+  };
+
+  // Belt-and-suspenders: also read food log directly from localStorage on mount
+  const [localFoodLog] = useState<FoodEntry[]>(() => {
+    try {
+      const stored = localStorage.getItem(`gameday_food_log_${profile.uid}_${today}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const displayFoodLog = todayFoodLog.length >= localFoodLog.length ? todayFoodLog : localFoodLog;
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden animate-in fade-in slide-in-from-right-10 duration-700">
@@ -179,27 +203,67 @@ export default function Stats({
           </div>
         </div>
 
-        {/* Water intake */}
+        {/* Water intake tracker */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Hydration Target</h4>
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Hydration</h4>
           </div>
-          <div className="bg-blue-500/5 border border-blue-500/15 rounded-3xl p-6 flex items-center gap-5">
-            <div className="h-12 w-12 rounded-2xl bg-blue-500/15 flex items-center justify-center shrink-0">
-              <Droplets size={24} className="text-blue-400" />
-            </div>
-            <div className="flex-1 min-w-0 space-y-0.5">
-              <p className="text-[8px] font-black uppercase tracking-widest text-blue-400/60">
-                {water.personalized ? 'Personalized Target' : 'Default Target'}
-              </p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-headline font-black text-blue-400">{(water.ml / 1000).toFixed(1)}</span>
-                <span className="text-xs font-bold text-blue-400/60 uppercase tracking-widest">L / day</span>
+          <div className="bg-blue-500/5 border border-blue-500/15 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-[8px] font-black uppercase tracking-widest text-blue-400/60">
+                  {water.personalized ? 'Personalized Target' : 'Default Target'}
+                </p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-headline font-black text-blue-400">{(waterLogged / 1000).toFixed(1)}</span>
+                  <span className="text-xs font-bold text-blue-400/40 uppercase tracking-widest">/ {(water.ml / 1000).toFixed(1)} L</span>
+                </div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">
+                  {Math.round(waterLogged / 250)} / {water.glasses} glasses
+                </p>
               </div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">
-                ≈ {water.glasses} glasses · {water.personalized ? `${profile.weight} bodyweight + training` : 'athlete default'}
-              </p>
+              <div className="h-12 w-12 rounded-2xl bg-blue-500/15 flex items-center justify-center shrink-0">
+                <Droplets size={24} className="text-blue-400" />
+              </div>
             </div>
+            <Progress value={Math.min(100, (waterLogged / water.ml) * 100)} className="h-1.5 bg-white/10" />
+            <div className="flex flex-wrap gap-2">
+              {[200, 500, 600, 1000, 2000].map(ml => (
+                <button
+                  key={ml}
+                  onClick={() => addWater(ml)}
+                  className="px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 active:scale-95 transition-all"
+                >
+                  +{ml >= 1000 ? `${ml / 1000}L` : `${ml}ml`}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowOtherInput(v => !v)}
+                className="px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-white/5 border border-white/10 text-white/40 hover:bg-white/10 active:scale-95 transition-all"
+              >
+                Other
+              </button>
+            </div>
+            {showOtherInput && (
+              <div className="flex items-center gap-2 animate-in slide-in-from-top-1 duration-150">
+                <input
+                  type="number"
+                  value={otherInput}
+                  onChange={e => setOtherInput(e.target.value)}
+                  placeholder="Amount in ml"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white placeholder:text-white/20 outline-none focus:border-blue-500/30"
+                />
+                <button
+                  onClick={() => {
+                    const ml = parseInt(otherInput);
+                    if (ml > 0) { addWater(ml); setOtherInput(''); setShowOtherInput(false); }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                >
+                  Add
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -242,13 +306,13 @@ export default function Stats({
         </div>
 
         {/* Recent scanned foods */}
-        {todayFoodLog.length > 0 && (
+        {displayFoodLog.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-white/5 pb-2">
               <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Logged Foods Today</h4>
             </div>
             <div className="space-y-2">
-              {[...todayFoodLog].reverse().map((food, i) => (
+              {[...displayFoodLog].reverse().map((food, i) => (
                 <div key={i} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate">{food.name}</p>

@@ -21,6 +21,7 @@ const GeneratePersonalizedTrainingPlanInputSchema = z.object({
   trainingDays: z.array(z.string()).optional().describe('Days athlete trains, e.g. ["Mon","Wed","Fri","Sat"]. All other days are rest days.'),
   trainingTime: z.string().optional().describe('Preferred training time in HH:mm format'),
   todayDayOfWeek: z.string().optional().describe('Current day of week short name, e.g. "Mon", "Tue"'),
+  isGameDay: z.boolean().optional().describe('True if the athlete has a match scheduled for today'),
 });
 
 const GeneratePersonalizedTrainingPlanOutputSchema = z.object({
@@ -56,6 +57,7 @@ School: {{{schoolStartTime}}} to {{{schoolEndTime}}}
 {{#if trainingDays}}Training Days: {{#each trainingDays}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}} — all other days are REST days.
 Today: {{todayDayOfWeek}}{{/if}}
 {{#if trainingTime}}Preferred training time: {{{trainingTime}}}{{/if}}
+{{#if isGameDay}}TODAY IS A MATCH DAY.{{/if}}
 
 RULES:
 1. SCHOOL LOCKOUT: NO training/nutrition allowed between {{{schoolStartTime}}} and {{{schoolEndTime}}}. Exactly one block: "School Attendance" during this window.
@@ -65,6 +67,7 @@ RULES:
 5. DRILL DEPTH: Drills must have 3-4 specific technical steps as a numbered list. Be unique to being a {{{position}}} in {{{sport}}}.
 6. Use 24-hour format (HH:mm) for the "time" field internally for consistency.
 7. TRAINING vs REST: If today ({{todayDayOfWeek}}) is NOT in the training days list, this is a REST DAY. On rest days, replace all training blocks with "Active Recovery" (light stretching, foam rolling, or an easy walk). Do NOT schedule intense drills on rest days. If today IS a training day, schedule the main drill block near the preferred training time.
+8. GAME DAY NUTRITION: {{#if isGameDay}}TODAY IS A MATCH DAY. Schedule a pre-match breakfast block in the morning (around 07:00–08:00) with the intel: light, easy-to-digest carb-rich food only — e.g. white toast with honey, banana and water, or plain oats. NO heavy food, NO eggs, NO dairy, NO high-fat or high-fibre items that could cause stomach issues. The meal should be done 2–3 hours before kickoff. Also include a post-match recovery nutrition block. Skip intense training drills today — the match is the session.{{else}}Standard nutrition rules apply.{{/if}}
 `,
 });
 

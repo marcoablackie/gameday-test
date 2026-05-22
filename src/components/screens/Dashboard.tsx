@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2 } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2, Plus } from 'lucide-react';
 import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
 import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { getDocViaRest } from '@/firebase/firestore/rest-fetch';
 import { setDocViaRest } from '@/firebase/firestore/rest-write';
 import { cn } from '@/lib/utils';
-import type { UserProfile, ScreenState } from '../GamedayFlow';
+import type { UserProfile, ScreenState, DailyStats } from '../GamedayFlow';
 import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, getSavedTeam, fixturesForTeam, type FSCFixture, type FSCData } from '@/lib/fsc-data';
 
 type Snack = { name: string; benefit: string; steps: string[]; kcal: number; protein: number; carbs: number; fats: number };
@@ -72,12 +72,14 @@ export default function Dashboard({
   onNavClick,
   onComplete,
   onSkip,
+  onLogMeal,
 }: {
   profile: UserProfile,
   onActivityClick: (item: any) => void,
   onNavClick: (screen: ScreenState) => void,
   onComplete: (activityId: string, type: string) => void,
   onSkip: (activityId: string) => void,
+  onLogMeal?: (stats: DailyStats, name: string) => void,
 }) {
   const db = useFirestore();
   const [myClub, setMyClub] = useState<{ id: string; name: string; logo: string } | null>(null);
@@ -165,6 +167,27 @@ export default function Dashboard({
       }
 
       const todayDayOfWeek = new Date().toLocaleDateString('en-AU', { weekday: 'short', timeZone: 'Australia/Sydney' });
+
+      // Detect game day from cached FSC data (synchronous, no extra fetch)
+      let isGameDay = false;
+      try {
+        const fscRaw = localStorage.getItem('gameday_fsc_data');
+        if (fscRaw) {
+          const { fixtures } = JSON.parse(fscRaw) as FSCData;
+          const teamRaw = localStorage.getItem('gameday_selected_team');
+          const clubRaw = localStorage.getItem('gameday_my_club');
+          const clubName = (teamRaw ? JSON.parse(teamRaw).clubName : JSON.parse(clubRaw || '{}').name || '').toLowerCase();
+          const todayStr = new Date().toDateString();
+          if (clubName) {
+            isGameDay = Array.isArray(fixtures) && fixtures.some(f =>
+              parseMatchDate(f.matchDate).toDateString() === todayStr &&
+              ((f.homeTeam.name ?? '').toLowerCase().includes(clubName) ||
+               (f.awayTeam.name ?? '').toLowerCase().includes(clubName))
+            );
+          }
+        }
+      } catch {}
+
       const result = await generatePersonalizedTrainingPlan({
         sport: profile.sport,
         position: profile.position,
@@ -179,6 +202,7 @@ export default function Dashboard({
         trainingDays: profile.trainingDays,
         trainingTime: profile.trainingTime,
         todayDayOfWeek,
+        isGameDay,
       });
 
       const planData = { ...result, uid: profile.uid, date: todayStr, createdAt: new Date().toISOString() };
@@ -248,6 +272,8 @@ export default function Dashboard({
 
   const [activeSnack, setActiveSnack] = useState<Snack | null>(null);
   const [snackLoading, setSnackLoading] = useState(false);
+  const [snackLogged, setSnackLogged] = useState(false);
+  useEffect(() => { setSnackLogged(false); }, [activeSnack?.name]);
 
   const fetchSnack = async () => {
     if (activeSnack) { setActiveSnack(null); return; }
@@ -424,31 +450,47 @@ export default function Dashboard({
                   <span className="text-white/30">{activeSnack.carbs}g C</span>
                   <span className="text-white/30">{activeSnack.fats}g F</span>
                 </div>
-                <button
-                  onClick={async () => {
-                    setSnackLoading(true);
-                    try {
-                      const res = await fetch('/api/snack', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          sport: profile.sport,
-                          position: profile.position,
-                          weight: profile.weight,
-                          caloriesLogged: profile.dailyStats?.calories ?? 0,
-                        }),
-                      });
-                      const data = await res.json();
-                      if (!data.error) setActiveSnack(data);
-                    } catch {}
-                    finally { setSnackLoading(false); }
-                  }}
-                  disabled={snackLoading}
-                  className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors disabled:opacity-40"
-                >
-                  {snackLoading ? <Loader2 size={10} className="animate-spin" /> : <Shuffle size={10} />}
-                  New
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (!activeSnack || snackLogged) return;
+                      onLogMeal?.({ calories: activeSnack.kcal, protein: activeSnack.protein, carbs: activeSnack.carbs, fats: activeSnack.fats, sugar: 0 }, activeSnack.name);
+                      setSnackLogged(true);
+                    }}
+                    disabled={snackLogged}
+                    className={cn(
+                      "flex items-center gap-1 text-[8px] font-black uppercase tracking-widest transition-colors",
+                      snackLogged ? "text-emerald-400" : "text-amber-400/60 hover:text-amber-400"
+                    )}
+                  >
+                    {snackLogged ? <><CheckCircle2 size={10} /> Logged</> : <><Plus size={10} /> Log It</>}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setSnackLoading(true);
+                      try {
+                        const res = await fetch('/api/snack', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            sport: profile.sport,
+                            position: profile.position,
+                            weight: profile.weight,
+                            caloriesLogged: profile.dailyStats?.calories ?? 0,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!data.error) setActiveSnack(data);
+                      } catch {}
+                      finally { setSnackLoading(false); }
+                    }}
+                    disabled={snackLoading}
+                    className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors disabled:opacity-40"
+                  >
+                    {snackLoading ? <Loader2 size={10} className="animate-spin" /> : <Shuffle size={10} />}
+                    New
+                  </button>
+                </div>
               </div>
             </div>
           )}
