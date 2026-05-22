@@ -254,7 +254,7 @@ export default function Dashboard({
         {nextGame && (() => {
           const countdown = daysUntilDate(nextGame.matchDate);
           const local = parseMatchDate(nextGame.matchDate);
-          const dateLabel = local.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+          const dateLabel = local.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Australia/Sydney' });
           const kickoff = formatKickoff(local);
           const opponentClub = nextGame.opponentName.includes('  ')
             ? nextGame.opponentName.split('  ')[0].trim()

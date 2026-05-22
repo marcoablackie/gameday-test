@@ -33,32 +33,19 @@ export function loadFSCData(): Promise<FSCData> {
 
 // ─── Date / time ────────────────────────────────────────────────────────────
 
-// Australia/Sydney DST rules:
-//   AEDT (UTC+11): first Sunday of October → first Sunday of April
-//   AEST (UTC+10): first Sunday of April   → first Sunday of October
-function sydneyOffsetHours(utcDate: Date): number {
-  const y = utcDate.getUTCFullYear();
-  const firstSundayOf = (month: number) => {
-    const d = new Date(Date.UTC(y, month, 1));
-    while (d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() + 1);
-    return d;
-  };
-  const dstEnd = firstSundayOf(3);   // first Sunday of April  → clocks back
-  const dstStart = firstSundayOf(9); // first Sunday of October → clocks fwd
-  return utcDate >= dstEnd && utcDate < dstStart ? 10 : 11;
-}
+const SYD = 'Australia/Sydney';
 
+// Returns the raw UTC Date — use for comparisons with new Date().
 export function parseMatchDate(isoString: string): Date {
-  const utc = new Date(isoString);
-  return new Date(utc.getTime() + sydneyOffsetHours(utc) * 3_600_000);
+  return new Date(isoString);
 }
 
-export function formatDayHeader(localDate: Date): string {
-  return localDate.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+export function formatDayHeader(date: Date): string {
+  return date.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: SYD });
 }
 
-export function formatKickoff(localDate: Date): string {
-  return localDate.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true });
+export function formatKickoff(date: Date): string {
+  return date.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: SYD });
 }
 
 // ─── Name parsing ────────────────────────────────────────────────────────────
@@ -182,21 +169,18 @@ export type FixtureGroup = { dateKey: string; dayLabel: string; fixtures: FSCFix
 export function groupByDate(fixtures: FSCFixture[]): FixtureGroup[] {
   const map = new Map<string, FSCFixture[]>();
   for (const f of fixtures) {
-    const local = parseMatchDate(f.matchDate);
-    const key = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`;
+    // en-CA locale gives YYYY-MM-DD which is a stable sort key in Sydney time
+    const key = new Date(f.matchDate).toLocaleDateString('en-CA', { timeZone: SYD });
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(f);
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, group]) => {
-      const [y, m, d] = key.split('-').map(Number);
-      return {
-        dateKey: key,
-        dayLabel: new Date(y, m - 1, d).toLocaleDateString('en-AU', {
-          weekday: 'long', day: 'numeric', month: 'long',
-        }),
-        fixtures: group,
-      };
-    });
+    .map(([key, group]) => ({
+      dateKey: key,
+      dayLabel: new Date(key + 'T12:00:00').toLocaleDateString('en-AU', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      }),
+      fixtures: group,
+    }));
 }
