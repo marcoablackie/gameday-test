@@ -97,7 +97,16 @@ function PendingDebriefLoader({ fixtureId, onSubmit, onSkip }: {
 export default function GamedayFlow() {
   const { user: firebaseUser, loading: authLoading } = useUser();
   const db = useFirestore();
-  const [currentScreen, setCurrentScreen] = useState<ScreenState>('welcome');
+  const [currentScreen, setCurrentScreen] = useState<ScreenState>(() => {
+    // Skip the welcome flash for returning users — go straight to dashboard
+    // while Firebase auth resolves in the background.
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('gameday_last_uid')) {
+        return 'dashboard';
+      }
+    } catch {}
+    return 'welcome';
+  });
   const [selectedActivity, setSelectedActivity] = useState<{ activity: string, intel: string, type?: string, ingredients?: string[], youtubeSearchQuery?: string, videoId?: string } | null>(null);
   
   // Demo Mode State

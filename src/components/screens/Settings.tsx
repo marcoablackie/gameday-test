@@ -62,6 +62,7 @@ export default function Settings({
   const proClubs = proLeagueId ? (leagueById(proLeagueId)?.clubs ?? []) : [];
 
   const handleLogout = async () => {
+    try { localStorage.removeItem('gameday_last_uid'); } catch {}
     if (auth) await signOut(auth);
     window.location.reload();
   };
