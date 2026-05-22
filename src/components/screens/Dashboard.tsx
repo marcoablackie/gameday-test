@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle } from 'lucide-react';
 import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
 import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +15,28 @@ import { setDocViaRest } from '@/firebase/firestore/rest-write';
 import { cn } from '@/lib/utils';
 import type { UserProfile, ScreenState } from '../GamedayFlow';
 import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, getSavedTeam, fixturesForTeam, type FSCFixture, type FSCData } from '@/lib/fsc-data';
+
+type Snack = { name: string; benefit: string; steps: string[]; kcal: number; protein: number; carbs: number; fats: number };
+
+const SNACKS: Snack[] = [
+  { name: 'PB Banana Rice Cakes', benefit: 'Quick energy + sustained fuel', steps: ['Spread 1 tbsp peanut butter on 2 rice cakes', 'Slice half a banana on top', 'Drizzle with a little honey'], kcal: 280, protein: 7, carbs: 42, fats: 9 },
+  { name: 'Greek Yogurt Honey Bowl', benefit: 'High protein + easy digestion', steps: ['Spoon ¾ cup Greek yogurt into a bowl', 'Drizzle with 1 tsp honey', 'Add a handful of granola or berries on top'], kcal: 220, protein: 18, carbs: 28, fats: 3 },
+  { name: 'Apple + Almond Butter', benefit: 'Slow carbs + healthy fats', steps: ['Slice one apple into wedges', 'Dip into 2 tbsp almond butter', 'Sprinkle a pinch of cinnamon if available'], kcal: 250, protein: 5, carbs: 35, fats: 11 },
+  { name: 'Banana Peanut Butter Toast', benefit: 'Pre-training carb load', steps: ['Toast 1 slice of bread', 'Spread 1 tbsp peanut butter', 'Layer sliced banana + a shake of cinnamon'], kcal: 260, protein: 8, carbs: 40, fats: 8 },
+  { name: 'Dates + Nut Butter', benefit: 'Instant energy spike', steps: ['Split 4–5 Medjool dates open', 'Stuff each with ½ tsp peanut or almond butter', 'Optional: add a tiny pinch of sea salt'], kcal: 290, protein: 5, carbs: 55, fats: 8 },
+  { name: 'Chocolate Milk', benefit: 'Post-workout recovery classic', steps: ['Pour 1 cup cold milk into a glass', 'Add 1 tbsp chocolate powder or syrup', 'Stir well and drink within 30 min of training'], kcal: 200, protein: 9, carbs: 30, fats: 5 },
+  { name: 'Mango Cottage Cheese', benefit: 'Protein hit + natural sweetness', steps: ['Spoon ¾ cup cottage cheese into a bowl', 'Top with ½ cup diced fresh or frozen mango', 'Drizzle with honey if desired'], kcal: 180, protein: 19, carbs: 22, fats: 2 },
+  { name: 'Honey Banana Oats', benefit: 'Slow-release energy', steps: ['Add ½ cup quick oats + water to a bowl', 'Microwave 90 seconds, stir well', 'Top with sliced banana and a drizzle of honey'], kcal: 300, protein: 8, carbs: 58, fats: 3 },
+  { name: 'Banana + Dark Chocolate', benefit: 'Natural sugar + antioxidants', steps: ['Peel a banana and break into chunks', 'Break 2–3 squares of dark chocolate (70%+)', 'Eat together — the combo is elite'], kcal: 180, protein: 2, carbs: 40, fats: 5 },
+  { name: 'Frozen Berry Yogurt Bark', benefit: 'Refreshing recovery treat', steps: ['Spread ¾ cup Greek yogurt thin on baking paper', 'Scatter frozen berries + a drizzle of honey', 'Freeze 1–2 hrs, break into pieces'], kcal: 150, protein: 12, carbs: 20, fats: 2 },
+  { name: 'No-Bake Energy Balls', benefit: 'Portable pre-game fuel', steps: ['Mix ½ cup oats + 2 tbsp peanut butter + 1 tbsp honey', 'Add a handful of dark choc chips', 'Roll into balls, refrigerate 20 min'], kcal: 240, protein: 6, carbs: 32, fats: 10 },
+  { name: 'Boiled Egg + Fruit', benefit: 'Protein + fast carbs combo', steps: ['Hard boil 1–2 eggs (7–8 min)', 'Peel and add salt/pepper', 'Pair with a banana or handful of grapes'], kcal: 220, protein: 14, carbs: 24, fats: 8 },
+];
+
+function pickSnack(current?: Snack): Snack {
+  const others = current ? SNACKS.filter(s => s.name !== current.name) : SNACKS;
+  return others[Math.floor(Math.random() * others.length)];
+}
 
 function formatTo12h(time24: string) {
   if (!time24) return "";
@@ -244,6 +266,8 @@ export default function Dashboard({
     }
   };
 
+  const [activeSnack, setActiveSnack] = useState<Snack | null>(null);
+
   const rank = getRank(profile.xp ?? 0);
   const nextRank = getNextRank(profile.xp ?? 0);
   const rankProgress = getRankProgress(profile.xp ?? 0);
@@ -351,9 +375,64 @@ export default function Dashboard({
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Timeline</h4>
-            <span className="text-[10px] font-bold text-white uppercase tracking-widest">{formatTo12h(currentTime)}</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setActiveSnack(s => s ? null : pickSnack())}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
+                  activeSnack
+                    ? "bg-amber-400/15 border-amber-400/30 text-amber-300"
+                    : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
+                )}
+              >
+                <Apple size={10} />
+                Snack
+              </button>
+              <span className="text-[10px] font-bold text-white uppercase tracking-widest">{formatTo12h(currentTime)}</span>
+            </div>
           </div>
           
+          {/* Snack card */}
+          {activeSnack && (
+            <div className="bg-amber-400/5 border border-amber-400/15 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-400/70 mb-0.5">Snack Boost</p>
+                  <p className="text-base font-black uppercase tracking-tight leading-tight text-white">{activeSnack.name}</p>
+                  <p className="text-[9px] text-amber-400/60 font-bold uppercase tracking-widest mt-0.5">{activeSnack.benefit}</p>
+                </div>
+                <button onClick={() => setActiveSnack(null)} className="p-1.5 rounded-full bg-white/5 text-white/30 hover:text-white transition-colors shrink-0">
+                  <X size={12} />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {activeSnack.steps.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="text-amber-400 font-black text-xs shrink-0 mt-0.5 w-4">{i + 1}.</span>
+                    <p className="text-[11px] text-white/70 font-medium leading-snug">{step}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-amber-400/10">
+                <div className="flex gap-3 text-[8px] font-black uppercase tracking-widest">
+                  <span className="text-amber-400">{activeSnack.kcal} kcal</span>
+                  <span className="text-white/30">{activeSnack.protein}g P</span>
+                  <span className="text-white/30">{activeSnack.carbs}g C</span>
+                  <span className="text-white/30">{activeSnack.fats}g F</span>
+                </div>
+                <button
+                  onClick={() => setActiveSnack(s => pickSnack(s ?? undefined))}
+                  className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-400/60 hover:text-amber-400 transition-colors"
+                >
+                  <Shuffle size={10} />
+                  New
+                </button>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="space-y-4">
               {[1,2,3].map(i => <div key={i} className="h-24 bg-white/5 rounded-2xl animate-pulse" />)}
