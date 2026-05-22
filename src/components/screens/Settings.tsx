@@ -11,6 +11,9 @@ import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import type { UserProfile } from '../GamedayFlow';
 import { COUNTRIES, leaguesForCountry, leagueById } from '@/lib/global-leagues';
+import { cn } from '@/lib/utils';
+
+const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const SPORT_POSITIONS: Record<string, string[]> = {
   Basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'],
@@ -144,6 +147,56 @@ export default function Settings({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+              <Clock size={14} className="text-primary" />
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Training Schedule</h4>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Training Days</Label>
+              <p className="text-[9px] text-white/20 font-medium uppercase tracking-wider">Rest days are auto-calculated for recovery</p>
+              <div className="flex gap-2 flex-wrap">
+                {DAYS_OF_WEEK.map(day => {
+                  const active = (profile.trainingDays ?? []).includes(day);
+                  return (
+                    <button
+                      key={day}
+                      onClick={() => {
+                        const current = profile.trainingDays ?? [];
+                        onUpdateProfile({
+                          trainingDays: active ? current.filter(d => d !== day) : [...current, day]
+                        });
+                      }}
+                      className={cn(
+                        "px-3 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all",
+                        active
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-transparent border-white/10 text-white/40 hover:border-white/30"
+                      )}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Training Time</Label>
+              <Select value={profile.trainingTime || '16:00'} onValueChange={(val) => onUpdateProfile({ trainingTime: val })}>
+                <SelectTrigger className="h-12 bg-white/5 border-white/10 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-white/20">
+                  {TIME_OPTIONS.map(time => (
+                    <SelectItem key={time.value} value={time.value}>{time.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

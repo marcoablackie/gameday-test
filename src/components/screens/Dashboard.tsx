@@ -157,6 +157,7 @@ export default function Dashboard({
         }
       }
 
+      const todayDayOfWeek = new Date().toLocaleDateString('en-AU', { weekday: 'short', timeZone: 'Australia/Sydney' });
       const result = await generatePersonalizedTrainingPlan({
         sport: profile.sport,
         position: profile.position,
@@ -167,7 +168,10 @@ export default function Dashboard({
         height: profile.height,
         weight: profile.weight,
         age: profile.age,
-        recentFeedback: profile.lastFeedback
+        recentFeedback: profile.lastFeedback,
+        trainingDays: profile.trainingDays,
+        trainingTime: profile.trainingTime,
+        todayDayOfWeek,
       });
 
       const planData = { ...result, uid: profile.uid, date: todayStr, createdAt: new Date().toISOString() };

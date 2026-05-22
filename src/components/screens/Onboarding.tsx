@@ -30,13 +30,14 @@ const SPORT_POSITIONS: Record<string, string[]> = {
   Tennis: ['Baseline Player', 'Serve & Volleyer', 'All-Court Player'],
 };
 
-// Helper for 12h display options
 const TIME_OPTIONS = Array.from({ length: 24 }).map((_, i) => {
   const hour = i.toString().padStart(2, '0');
   const hNum = i % 12 || 12;
   const ampm = i >= 12 ? 'PM' : 'AM';
   return { value: `${hour}:00`, label: `${hNum}:00 ${ampm}` };
 });
+
+const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => void }) {
   const [profile, setProfile] = useState<UserProfile>({
@@ -50,6 +51,8 @@ export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => 
     hasAccess: false,
     schoolStartTime: '08:00',
     schoolEndTime: '15:00',
+    trainingDays: [],
+    trainingTime: '16:00',
     xp: 0,
     level: 1,
     completedActivities: [],
@@ -70,6 +73,16 @@ export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => 
       }));
     }
   }, [profile.sport]);
+
+  const toggleDay = (day: string) => {
+    setProfile(prev => {
+      const current = prev.trainingDays ?? [];
+      return {
+        ...prev,
+        trainingDays: current.includes(day) ? current.filter(d => d !== day) : [...current, day]
+      };
+    });
+  };
 
   const toggleItem = (list: 'bestAbilities' | 'areaToImprove', item: string) => {
     setProfile(prev => {
@@ -156,6 +169,41 @@ export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => 
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Training Days</Label>
+            <p className="text-[9px] text-white/30 font-medium uppercase tracking-wider -mt-2">Select days you train — rest days are optimized for recovery</p>
+            <div className="flex gap-2 flex-wrap">
+              {DAYS_OF_WEEK.map(day => (
+                <button
+                  key={day}
+                  onClick={() => toggleDay(day)}
+                  className={cn(
+                    "px-3 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all",
+                    (profile.trainingDays ?? []).includes(day)
+                      ? "bg-primary border-primary text-primary-foreground scale-105"
+                      : "bg-transparent border-white/10 text-muted-foreground hover:border-white/40"
+                  )}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Preferred Training Time</Label>
+            <Select value={profile.trainingTime || '16:00'} onValueChange={(val) => setProfile(p => ({ ...p, trainingTime: val }))}>
+              <SelectTrigger className="bg-card border-white/10 h-14 rounded-xl text-xs px-4 focus:ring-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-white/20">
+                {TIME_OPTIONS.map(time => (
+                  <SelectItem key={time.value} value={time.value}>{time.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-4">

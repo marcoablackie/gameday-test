@@ -58,6 +58,8 @@ export type UserProfile = {
   proLeagueId?: string;
   proClubId?: string;
   proClubName?: string;
+  trainingDays?: string[];
+  trainingTime?: string;
 };
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';

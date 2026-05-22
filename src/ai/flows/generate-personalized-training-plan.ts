@@ -18,6 +18,9 @@ const GeneratePersonalizedTrainingPlanInputSchema = z.object({
   age: z.string().optional().describe('Athlete age'),
   upcomingGameDetails: z.string().optional(),
   recentFeedback: z.string().optional(),
+  trainingDays: z.array(z.string()).optional().describe('Days athlete trains, e.g. ["Mon","Wed","Fri","Sat"]. All other days are rest days.'),
+  trainingTime: z.string().optional().describe('Preferred training time in HH:mm format'),
+  todayDayOfWeek: z.string().optional().describe('Current day of week short name, e.g. "Mon", "Tue"'),
 });
 
 const GeneratePersonalizedTrainingPlanOutputSchema = z.object({
@@ -50,14 +53,18 @@ Athlete: {{{sport}}} ({{{position}}})
 Physicals: {{#if height}}{{{height}}}{{/if}} {{#if weight}}{{{weight}}}{{/if}}
 Targeting: {{#each areaToImprove}}{{{this}}}, {{/each}}
 School: {{{schoolStartTime}}} to {{{schoolEndTime}}}
+{{#if trainingDays}}Training Days: {{#each trainingDays}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}} — all other days are REST days.
+Today: {{todayDayOfWeek}}{{/if}}
+{{#if trainingTime}}Preferred training time: {{{trainingTime}}}{{/if}}
 
 RULES:
 1. SCHOOL LOCKOUT: NO training/nutrition allowed between {{{schoolStartTime}}} and {{{schoolEndTime}}}. Exactly one block: "School Attendance" during this window.
 2. NO MORNING TRAINING: Morning (before school) is strictly for hydration and 1 simple snack. No exercise.
 3. DINNER REALISM: For Dinner, acknowledge it is a family meal. Focus on "Plate Balance" (e.g., "Ensure a palm-sized protein, fist-sized carb, and plenty of greens") rather than a specific recipe.
 4. EXTREME SIMPLICITY: Other meals must use only basic kitchen staples (Eggs, Chicken, Rice, Fruit, Bread).
-5. DRILL DEPTH: Drills must have 3-4 specific technical steps. Be unique to being a {{{position}}} in {{{sport}}}.
+5. DRILL DEPTH: Drills must have 3-4 specific technical steps as a numbered list. Be unique to being a {{{position}}} in {{{sport}}}.
 6. Use 24-hour format (HH:mm) for the "time" field internally for consistency.
+7. TRAINING vs REST: If today ({{todayDayOfWeek}}) is NOT in the training days list, this is a REST DAY. On rest days, replace all training blocks with "Active Recovery" (light stretching, foam rolling, or an easy walk). Do NOT schedule intense drills on rest days. If today IS a training day, schedule the main drill block near the preferred training time.
 `,
 });
 

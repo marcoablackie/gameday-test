@@ -141,7 +141,7 @@ export default function FoodTracker({
       <div className="absolute inset-0">
         {preview ? (
           <Image src={preview} alt="Capture" fill className="object-cover" />
-        ) : cameraActive ? (
+        ) : (
           <video
             ref={videoRef}
             autoPlay
@@ -149,14 +149,6 @@ export default function FoodTracker({
             muted
             className="absolute inset-0 w-full h-full object-cover"
           />
-        ) : (
-          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-4">
-            <Camera size={48} className="text-white/20" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Camera Access Required</p>
-            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="text-[10px] border-white/20">
-              Upload Photo
-            </Button>
-          </div>
         )}
       </div>
 
