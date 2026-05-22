@@ -55,6 +55,9 @@ export type UserProfile = {
   uid: string;
   email: string;
   myTeam?: SavedTeam | null;
+  proLeagueId?: string;
+  proClubId?: string;
+  proClubName?: string;
 };
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';

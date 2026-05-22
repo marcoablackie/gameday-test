@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, Circle, XCircle, Zap } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, Circle, XCircle, Zap, Bell, BellOff } from 'lucide-react';
+import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
@@ -186,6 +187,15 @@ export default function Dashboard({
     fetchPlan();
   }, [fetchPlan]);
 
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  useEffect(() => { setNotifEnabled(isNotificationPermitted()); }, []);
+
+  useEffect(() => {
+    if (!plan || !notifEnabled) return;
+    scheduleDayNotifications(plan.schedule, profile.schoolStartTime, profile.schoolEndTime);
+    return () => clearScheduledNotifications();
+  }, [plan, notifEnabled, profile.schoolStartTime, profile.schoolEndTime]);
+
   const sortedSchedule = useMemo(() => {
     if (!plan) return [];
     
@@ -228,12 +238,24 @@ export default function Dashboard({
     <div className="flex flex-col h-full bg-background relative overflow-hidden animate-in fade-in duration-700">
       <div className="px-6 pt-12 pb-4 flex justify-between items-center shrink-0">
         <h3 className="text-xl font-headline font-bold uppercase tracking-tight">Daily Schedule</h3>
-        <button onClick={() => onNavClick('settings')} className="relative group">
-          <Avatar className="h-10 w-10 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-pointer">
-            <AvatarImage src={avatar?.imageUrl} />
-            <AvatarFallback>PRO</AvatarFallback>
-          </Avatar>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              const granted = await requestNotificationPermission();
+              setNotifEnabled(granted);
+            }}
+            title={notifEnabled ? 'Notifications on' : 'Enable notifications'}
+            className="p-2 rounded-full text-white/20 hover:text-white transition-colors"
+          >
+            {notifEnabled ? <Bell size={16} className="text-primary" /> : <BellOff size={16} />}
+          </button>
+          <button onClick={() => onNavClick('settings')} className="relative group">
+            <Avatar className="h-10 w-10 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-pointer">
+              <AvatarImage src={avatar?.imageUrl} />
+              <AvatarFallback>PRO</AvatarFallback>
+            </Avatar>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 space-y-6 pb-32">
@@ -316,65 +338,68 @@ export default function Dashboard({
               <Button onClick={() => fetchPlan(true)} variant="outline" className="h-10 text-[10px] font-bold uppercase border-white/10 hover:bg-white/10">Retry Sync</Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-1">
               {sortedSchedule.map((item, idx) => {
                 const isCurrent = item.isCurrent;
                 const isPast = item.isPast;
                 const isCompleted = item.isCompleted;
                 const canClick = item.type === 'training' || item.type === 'nutrition';
 
+                const typeStyle: Record<string, string> = {
+                  training: 'bg-primary/15 text-primary',
+                  nutrition: 'bg-amber-400/15 text-amber-400',
+                  recovery: 'bg-blue-400/15 text-blue-400',
+                  sleep: 'bg-purple-400/15 text-purple-400',
+                  school: 'bg-white/8 text-white/30',
+                };
+
                 return (
-                  <button 
-                    key={idx} 
+                  <button
+                    key={idx}
                     disabled={!canClick}
-                    onClick={() => onActivityClick(item)}
+                    onClick={() => canClick ? onActivityClick(item) : undefined}
                     className={cn(
-                      "w-full text-left relative group border transition-all duration-300 rounded-2xl p-5 flex flex-col gap-3 overflow-hidden",
-                      isCurrent ? "bg-white border-white scale-[1.02] active-protocol-pulse" : "bg-white/5 border-white/5",
-                      isPast && !isCompleted ? "opacity-30 grayscale" : "opacity-100",
-                      canClick && "cursor-pointer active:scale-[0.98]"
+                      "w-full text-left flex items-center gap-3 px-3 py-3.5 rounded-xl transition-all duration-200 group",
+                      isCurrent && "bg-primary/8 ring-1 ring-inset ring-primary/20",
+                      !isCurrent && canClick && "hover:bg-white/4",
+                      isPast && !isCompleted && !isCurrent && "opacity-30",
+                      canClick ? "active:scale-[0.98] cursor-pointer" : "cursor-default"
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                         <div className={cn("px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest flex items-center gap-1.5", isCurrent ? "bg-black text-white" : "bg-white/10 text-white/40")}>
-                            {getTypeIcon(item.type)}
-                            {item.type}
-                         </div>
-                         <p className={cn("text-[10px] font-bold uppercase tracking-widest", isCurrent ? "text-black/40" : "text-white/20")}>
-                            {formatTo12h(item.time)}
-                         </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isCompleted ? (
-                          <div className={cn("h-6 w-6 rounded-full flex items-center justify-center", isCurrent ? "bg-emerald-600 text-white" : "bg-emerald-500/20 text-emerald-500")}>
-                            <CheckCircle2 size={16} />
-                          </div>
-                        ) : isPast ? (
-                          <div className={cn("h-6 w-6 rounded-full flex items-center justify-center", isCurrent ? "text-destructive" : "text-destructive/20")}>
-                            <XCircle size={16} />
-                          </div>
-                        ) : (
-                          <div className={cn("h-6 w-6 rounded-full border flex items-center justify-center", isCurrent ? "border-black/10" : "border-white/10")}>
-                             {isCurrent ? <div className="h-2 w-2 rounded-full bg-black animate-pulse" /> : <Circle size={12} className="opacity-10" />}
-                          </div>
-                        )}
-                      </div>
+                    <span className="text-[9px] font-mono font-bold text-white/25 w-11 shrink-0 tabular-nums">
+                      {formatTo12h(item.time)}
+                    </span>
+
+                    <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0", typeStyle[item.type] ?? typeStyle.school)}>
+                      {getTypeIcon(item.type)}
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <h4 className={cn("text-xl font-headline font-bold uppercase leading-none tracking-tight", isCurrent ? "text-black" : "text-white", isCompleted && !isCurrent && "text-white/40")}>
-                          {item.activity}
-                        </h4>
-                        {isCurrent && !isCompleted && (
-                          <p className="text-[9px] font-bold uppercase text-black/50 tracking-widest italic">Active Protocol</p>
-                        )}
-                        {isPast && !isCompleted && !isCurrent && (
-                          <p className="text-[8px] font-bold uppercase text-destructive/40 tracking-widest italic">Missed</p>
-                        )}
-                      </div>
-                      {canClick && <ChevronRight size={18} className={isCurrent ? "text-black/30" : "text-white/10"} />}
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        "text-[13px] font-bold leading-tight truncate",
+                        isCurrent ? "text-white" : isCompleted ? "text-white/30 line-through decoration-white/20" : "text-white/70",
+                      )}>
+                        {item.activity}
+                      </p>
+                      {isCurrent && !isCompleted && (
+                        <span className="text-[8px] font-black uppercase tracking-[0.12em] text-primary">Active now</span>
+                      )}
+                      {isPast && !isCompleted && !isCurrent && (
+                        <span className="text-[8px] font-black uppercase tracking-widest text-red-500/50">Missed</span>
+                      )}
+                    </div>
+
+                    <div className="shrink-0">
+                      {isCompleted ? (
+                        <CheckCircle2 size={15} className="text-emerald-500" />
+                      ) : isPast && !isCurrent ? (
+                        <XCircle size={13} className="text-white/10" />
+                      ) : canClick ? (
+                        <ChevronRight size={13} className={cn(
+                          "transition-colors",
+                          isCurrent ? "text-primary/50" : "text-white/10 group-hover:text-white/30"
+                        )} />
+                      ) : null}
                     </div>
                   </button>
                 );

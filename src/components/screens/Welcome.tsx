@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Zap, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
+import GamedayLogo from '@/components/GamedayLogo';
 
 export default function Welcome({ onNext }: { onNext: () => void }) {
   return (
@@ -10,10 +11,8 @@ export default function Welcome({ onNext }: { onNext: () => void }) {
       <div className="flex-1 space-y-16">
         <div className="space-y-8">
           <div className="relative inline-block">
-             <div className="absolute -inset-4 bg-white/10 rounded-3xl blur-2xl opacity-50" />
-             <div className="relative h-20 w-20 bg-primary flex items-center justify-center text-primary-foreground rounded-[2rem] neon-glow">
-               <Zap size={40} className="fill-current" />
-             </div>
+            <div className="absolute -inset-4 bg-primary/10 rounded-3xl blur-2xl opacity-60" />
+            <GamedayLogo className="relative" />
           </div>
           
           <div className="space-y-4">

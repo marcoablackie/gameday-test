@@ -1,8 +1,8 @@
 
 "use client";
 
-import React from 'react';
-import { ChevronLeft, LogOut, User, Ruler, Clock, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, LogOut, User, Ruler, Clock, Shield, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import type { UserProfile } from '../GamedayFlow';
+import { COUNTRIES, leaguesForCountry, leagueById } from '@/lib/global-leagues';
 
 const SPORT_POSITIONS: Record<string, string[]> = {
   Basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'],
@@ -47,6 +48,15 @@ export default function Settings({
   onUpdateProfile: (data: Partial<UserProfile>) => void
 }) {
   const auth = useAuth();
+
+  const [proCountry, setProCountry] = useState(() =>
+    profile.proLeagueId ? (leagueById(profile.proLeagueId)?.country ?? '') : ''
+  );
+  const [proLeagueId, setProLeagueId] = useState(profile.proLeagueId ?? '');
+  const [proClubId, setProClubId] = useState(profile.proClubId ?? '');
+
+  const proLeagues = proCountry ? leaguesForCountry(proCountry) : [];
+  const proClubs = proLeagueId ? (leagueById(proLeagueId)?.clubs ?? []) : [];
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -177,6 +187,68 @@ export default function Settings({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+
+          {/* ── Global Pro Team ── */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+              <Globe size={14} className="text-primary" />
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Follow a Pro Team</h4>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Country</Label>
+                <Select value={proCountry} onValueChange={(val) => { setProCountry(val); setProLeagueId(''); setProClubId(''); }}>
+                  <SelectTrigger className="h-12 bg-white/5 border-white/10 text-xs">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-white/20">
+                    {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {proCountry && (
+                <div className="space-y-2">
+                  <Label className="text-[8px] font-bold uppercase text-white/30 tracking-widest">League</Label>
+                  <Select value={proLeagueId} onValueChange={(val) => { setProLeagueId(val); setProClubId(''); }}>
+                    <SelectTrigger className="h-12 bg-white/5 border-white/10 text-xs">
+                      <SelectValue placeholder="Select league" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-white/20">
+                      {proLeagues.map(l => (
+                        <SelectItem key={l.id} value={l.id}>{l.flag} {l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {proLeagueId && (
+                <div className="space-y-2">
+                  <Label className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Club</Label>
+                  <Select value={proClubId} onValueChange={(val) => {
+                    setProClubId(val);
+                    const club = proClubs.find(c => c.id === val);
+                    if (club) onUpdateProfile({ proLeagueId, proClubId: val, proClubName: club.name });
+                  }}>
+                    <SelectTrigger className="h-12 bg-white/5 border-white/10 text-xs">
+                      <SelectValue placeholder="Select club" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-white/20">
+                      {proClubs.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {profile.proClubName && (
+                <p className="text-[9px] font-black uppercase tracking-widest text-primary">
+                  Following: {profile.proClubName}
+                </p>
+              )}
             </div>
           </div>
 
