@@ -305,16 +305,47 @@ export default function GamedayFlow() {
     }
   };
 
-  const logMealStats = (stats: DailyStats) => {
+  const logMealStats = (stats: DailyStats, foodName?: string) => {
     if (!userRef || !effectiveProfile) return;
-    const update = {
-      'dailyStats.calories': (effectiveProfile.dailyStats?.calories || 0) + stats.calories,
-      'dailyStats.protein': (effectiveProfile.dailyStats?.protein || 0) + stats.protein,
-      'dailyStats.carbs': (effectiveProfile.dailyStats?.carbs || 0) + stats.carbs,
-      'dailyStats.fats': (effectiveProfile.dailyStats?.fats || 0) + stats.fats,
-      'dailyStats.sugar': (effectiveProfile.dailyStats?.sugar || 0) + stats.sugar,
+    const cur = effectiveProfile.dailyStats || { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 };
+    const newStats: DailyStats = {
+      calories: (cur.calories || 0) + stats.calories,
+      protein:  (cur.protein  || 0) + stats.protein,
+      carbs:    (cur.carbs    || 0) + stats.carbs,
+      fats:     (cur.fats     || 0) + stats.fats,
+      sugar:    (cur.sugar    || 0) + stats.sugar,
     };
-    reliableUpdate(update).catch(console.error);
+    reliableUpdate({
+      'dailyStats.calories': newStats.calories,
+      'dailyStats.protein':  newStats.protein,
+      'dailyStats.carbs':    newStats.carbs,
+      'dailyStats.fats':     newStats.fats,
+      'dailyStats.sugar':    newStats.sugar,
+    }).catch(console.error);
+    // Update cache so Stats reflects it immediately
+    if (effectiveUser) {
+      const updated = { ...effectiveProfile, dailyStats: newStats };
+      setCachedProfile(updated);
+      try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updated)); } catch {}
+    }
+    // Persist food log for Stats "recent foods" display
+    if (foodName && effectiveUser) {
+      const today = new Date().toISOString().split('T')[0];
+      const key = `gameday_food_log_${effectiveUser.uid}_${today}`;
+      try {
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        existing.push({
+          name: foodName,
+          calories: stats.calories,
+          protein: stats.protein,
+          carbs: stats.carbs,
+          fats: stats.fats,
+          sugar: stats.sugar,
+          time: new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        });
+        localStorage.setItem(key, JSON.stringify(existing));
+      } catch {}
+    }
   };
 
   const saveDebrief = (debrief: GameDebrief) => {

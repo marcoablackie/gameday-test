@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Home, Dumbbell, BarChart2, ChevronLeft, Zap, Camera, Trophy, Flame, Ruler } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,17 @@ export default function Stats({
   const rankProgress = getRankProgress(xp);
   const needsCalibration = !profile.height || !profile.weight || !profile.age;
   const targets = useMemo(() => calcMacroTargets(profile), [profile]);
+
+  type FoodEntry = { name: string; calories: number; protein: number; carbs: number; fats: number; sugar: number; time: string };
+  const [foodLog, setFoodLog] = useState<FoodEntry[]>([]);
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const key = `gameday_food_log_${profile.uid}_${today}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) setFoodLog(JSON.parse(stored));
+    } catch {}
+  }, [profile.uid]);
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden animate-in fade-in slide-in-from-right-10 duration-700">
@@ -186,12 +197,12 @@ export default function Stats({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {([
+              {[
                 { label: 'Protein', val: profile.dailyStats?.protein ?? 0, target: targets.protein },
                 { label: 'Sugar',   val: profile.dailyStats?.sugar   ?? 0, target: targets.sugar   },
                 { label: 'Carbs',   val: profile.dailyStats?.carbs   ?? 0, target: targets.carbs   },
                 { label: 'Fats',    val: profile.dailyStats?.fats    ?? 0, target: targets.fats    },
-              ] as const).map(({ label, val, target }) => (
+              ].map(({ label, val, target }) => (
                 <div key={label} className="bg-white/5 border border-white/5 rounded-3xl p-5 space-y-2">
                   <p className="text-[8px] font-bold uppercase text-white/30">{label}</p>
                   <div className="flex items-baseline gap-1">
@@ -204,6 +215,29 @@ export default function Stats({
             </div>
           </div>
         </div>
+
+        {/* Recent scanned foods */}
+        {foodLog.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Logged Foods Today</h4>
+            </div>
+            <div className="space-y-2">
+              {[...foodLog].reverse().map((food, i) => (
+                <div key={i} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold truncate">{food.name}</p>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-0.5">{food.time}</p>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <p className="text-sm font-black text-primary">{food.calories} kcal</p>
+                    <p className="text-[8px] text-white/30 font-bold">{food.protein}g P · {food.carbs}g C · {food.fats}g F</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 

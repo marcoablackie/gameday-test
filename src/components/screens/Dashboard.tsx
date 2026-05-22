@@ -383,13 +383,16 @@ export default function Dashboard({
                   school: 'bg-white/8 text-white/30',
                 };
 
+                const isMissed = isPast && !isCompleted && !isSkipped && !isCurrent;
+
                 return (
                   <div
                     key={idx}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-3.5 rounded-xl transition-all duration-200",
                       isCurrent && "bg-primary/8 ring-1 ring-inset ring-primary/20",
-                      (isCompleted || isSkipped) && "opacity-40",
+                      (isCompleted || isSkipped) && "opacity-35",
+                      isMissed && "opacity-20",
                     )}
                   >
                     {/* Tappable left section → opens detail */}
@@ -418,6 +421,9 @@ export default function Dashboard({
                         </p>
                         {isCurrent && !isCompleted && !isSkipped && (
                           <span className="text-[8px] font-black uppercase tracking-[0.12em] text-primary">Active now</span>
+                        )}
+                        {isMissed && (
+                          <span className="text-[8px] font-black uppercase tracking-widest text-red-500/60">Missed</span>
                         )}
                       </div>
                     </button>

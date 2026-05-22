@@ -15,7 +15,7 @@ export default function FoodTracker({
 }: {
   onBack: () => void,
   onNavClick: (screen: ScreenState) => void,
-  onLogMeal: (stats: DailyStats) => void
+  onLogMeal: (stats: DailyStats, foodName: string) => void
 }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalyzeFoodOutput | null>(null);
@@ -122,7 +122,7 @@ export default function FoodTracker({
       carbs: result.macros.carbs,
       fats: result.macros.fats,
       sugar: result.macros.sugar,
-    });
+    }, result.foodName);
     setLogged(true);
   };
 
