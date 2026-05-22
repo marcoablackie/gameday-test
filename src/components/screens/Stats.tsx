@@ -1,19 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Home, Dumbbell, BarChart2, ChevronLeft, Zap, Camera, Trophy, Flame, Ruler } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getRank, getRankProgress, getNextRank, RANKS } from '@/lib/rank';
 import type { ScreenState, UserProfile } from '../GamedayFlow';
-
-const RANKS = [
-  { name: 'Rookie', minLevel: 1, color: 'text-white/40', bg: 'bg-white/5' },
-  { name: 'Prospect', minLevel: 3, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-  { name: 'Professional', minLevel: 6, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-  { name: 'Elite Tier', minLevel: 10, color: 'text-orange-400', bg: 'bg-orange-400/10' },
-  { name: 'Legendary', minLevel: 20, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
-];
 
 function parseHeightToCm(height: string): number {
   const match = height.match(/(\d+)'(\d*)/);
@@ -57,8 +50,10 @@ export default function Stats({
   onBack: () => void,
   onNavClick: (screen: ScreenState) => void
 }) {
-  const currentRank = useMemo(() => [...RANKS].reverse().find(r => profile.level >= r.minLevel) || RANKS[0], [profile.level]);
-  const progressToNextLevel = profile.xp % 100;
+  const xp = profile.xp ?? 0;
+  const currentRank = getRank(xp);
+  const nextRank = getNextRank(xp);
+  const rankProgress = getRankProgress(xp);
   const needsCalibration = !profile.height || !profile.weight || !profile.age;
   const targets = useMemo(() => calcMacroTargets(profile), [profile]);
 
@@ -72,146 +67,144 @@ export default function Stats({
       </div>
 
       <div className="flex-1 overflow-y-auto px-8 space-y-8 pb-40">
-        {needsCalibration ? (
-          <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 space-y-6 animate-in zoom-in duration-500">
-            <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-              <Ruler size={24} />
+
+        {/* Rank card — always visible */}
+        <div className="relative p-8 rounded-3xl bg-white/5 border border-white/5 overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 p-4 opacity-5">
+            <Trophy size={140} />
+          </div>
+          <div className="flex items-center gap-4 mb-6">
+            <div className={cn("h-16 w-16 rounded-2xl flex items-center justify-center", currentRank.bg)}>
+              <Trophy size={32} className={currentRank.color} />
             </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-headline font-bold uppercase leading-tight tracking-tight">Calibration Required</h2>
-              <p className="text-xs text-white/40 font-medium uppercase tracking-widest leading-relaxed">
-                Body metrics missing. Sync your physical data to calculate your personalized calorie target.
-              </p>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Current Rank</p>
+              <h2 className={cn("text-3xl font-headline font-bold uppercase leading-none tracking-tight", currentRank.color)}>
+                {currentRank.name}
+              </h2>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{xp} XP</span>
+              {nextRank && (
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">
+                  {nextRank.minXP - xp} XP to {nextRank.name}
+                </span>
+              )}
+            </div>
+            <Progress value={rankProgress} className="h-2 bg-white/10" />
+            <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-white/20 pt-1">
+              {RANKS.map(r => (
+                <span key={r.name} className={cn(xp >= r.minXP ? currentRank.color : 'text-white/15')}>
+                  {r.name.slice(0, 3)}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Calibration prompt — inline, not a blocker */}
+        {needsCalibration && (
+          <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center text-primary shrink-0">
+              <Ruler size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Calibration Missing</p>
+              <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest">Add height/weight/age for accurate targets</p>
             </div>
             <Button
               onClick={() => onNavClick('settings')}
-              className="w-full h-14 rounded-xl bg-primary text-primary-foreground font-black uppercase italic"
+              size="sm"
+              className="h-9 px-4 text-[9px] font-black uppercase bg-primary text-primary-foreground rounded-xl shrink-0"
             >
-              Calibrate Now
+              Calibrate
             </Button>
           </div>
-        ) : (
-          <>
-            {/* Rank card */}
-            <div className="relative p-8 rounded-3xl bg-white/5 border border-white/5 overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                <Trophy size={140} />
-              </div>
-              <div className="flex items-center gap-4 mb-6">
-                <div className={cn("h-16 w-16 rounded-2xl flex items-center justify-center", currentRank.bg)}>
-                  <Trophy size={32} className={currentRank.color} />
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Current Rank</p>
-                  <h2 className={cn("text-3xl font-headline font-bold uppercase leading-none tracking-tight", currentRank.color)}>
-                    {currentRank.name}
-                  </h2>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-end">
-                  <span className="text-sm font-bold uppercase tracking-widest">Level {profile.level}</span>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{profile.xp} XP</p>
-                </div>
-                <Progress value={progressToNextLevel} className="h-2 bg-white/10" />
-              </div>
-            </div>
-
-            {/* Personalized calorie target */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Daily Nutrition Targets</h4>
-              </div>
-
-              <div className="bg-primary/5 border border-primary/20 rounded-3xl p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[8px] font-black uppercase tracking-widest text-primary/60">Personalized Target</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-headline font-black text-primary">{targets.calories.toLocaleString()}</span>
-                      <span className="text-xs font-bold text-primary/60 uppercase tracking-widest">kcal/day</span>
-                    </div>
-                  </div>
-                  <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
-                    <Flame size={24} />
-                  </div>
-                </div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 leading-relaxed">
-                  {profile.height} · {profile.weight} · Age {profile.age} · Athlete 1.725×
-                </p>
-                <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10">
-                  <div className="text-center space-y-0.5">
-                    <p className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Protein</p>
-                    <p className="text-sm font-black text-white">{targets.protein}g</p>
-                  </div>
-                  <div className="text-center space-y-0.5">
-                    <p className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Carbs</p>
-                    <p className="text-sm font-black text-white">{targets.carbs}g</p>
-                  </div>
-                  <div className="text-center space-y-0.5">
-                    <p className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Fats</p>
-                    <p className="text-sm font-black text-white">{targets.fats}g</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Today's intake */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Today's Intake</h4>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Calories</span>
-                    <div className="text-right">
-                      <span className="text-xl font-bold">{profile.dailyStats.calories}</span>
-                      <span className="text-[10px] text-white/20 ml-1">/ {targets.calories.toLocaleString()} kcal</span>
-                    </div>
-                  </div>
-                  <Progress value={Math.min(100, (profile.dailyStats.calories / targets.calories) * 100)} className="h-1.5 bg-white/10" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/5 border border-white/5 rounded-3xl p-5 space-y-2">
-                    <p className="text-[8px] font-bold uppercase text-white/30">Protein</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-xl font-bold">{profile.dailyStats.protein}g</p>
-                      <p className="text-[8px] text-white/20">/ {targets.protein}g</p>
-                    </div>
-                    <Progress value={Math.min(100, (profile.dailyStats.protein / targets.protein) * 100)} className="h-1 bg-white/10" />
-                  </div>
-                  <div className="bg-white/5 border border-white/5 rounded-3xl p-5 space-y-2">
-                    <p className="text-[8px] font-bold uppercase text-white/30">Sugar</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-xl font-bold">{profile.dailyStats.sugar}g</p>
-                      <p className="text-[8px] text-white/20">/ {targets.sugar}g</p>
-                    </div>
-                    <Progress value={Math.min(100, (profile.dailyStats.sugar / targets.sugar) * 100)} className="h-1 bg-white/10" />
-                  </div>
-                  <div className="bg-white/5 border border-white/5 rounded-3xl p-5 space-y-2">
-                    <p className="text-[8px] font-bold uppercase text-white/30">Carbs</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-xl font-bold">{profile.dailyStats.carbs}g</p>
-                      <p className="text-[8px] text-white/20">/ {targets.carbs}g</p>
-                    </div>
-                    <Progress value={Math.min(100, (profile.dailyStats.carbs / targets.carbs) * 100)} className="h-1 bg-white/10" />
-                  </div>
-                  <div className="bg-white/5 border border-white/5 rounded-3xl p-5 space-y-2">
-                    <p className="text-[8px] font-bold uppercase text-white/30">Fats</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-xl font-bold">{profile.dailyStats.fats}g</p>
-                      <p className="text-[8px] text-white/20">/ {targets.fats}g</p>
-                    </div>
-                    <Progress value={Math.min(100, (profile.dailyStats.fats / targets.fats) * 100)} className="h-1 bg-white/10" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
         )}
+
+        {/* Nutrition targets — personalized if calibrated, defaults otherwise */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Daily Targets</h4>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-[8px] font-black uppercase tracking-widest text-primary/60">
+                  {targets.personalized ? 'Personalized Target' : 'Default Target'}
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-headline font-black text-primary">{targets.calories.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-primary/60 uppercase tracking-widest">kcal/day</span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+                <Flame size={24} />
+              </div>
+            </div>
+            {targets.personalized && (
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 leading-relaxed">
+                {profile.height} · {profile.weight} · Age {profile.age} · Athlete 1.725×
+              </p>
+            )}
+            <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10">
+              <div className="text-center space-y-0.5">
+                <p className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Protein</p>
+                <p className="text-sm font-black text-white">{targets.protein}g</p>
+              </div>
+              <div className="text-center space-y-0.5">
+                <p className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Carbs</p>
+                <p className="text-sm font-black text-white">{targets.carbs}g</p>
+              </div>
+              <div className="text-center space-y-0.5">
+                <p className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Fats</p>
+                <p className="text-sm font-black text-white">{targets.fats}g</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Today's intake — always visible */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Today's Intake</h4>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Calories</span>
+                <div className="text-right">
+                  <span className="text-xl font-bold">{profile.dailyStats?.calories ?? 0}</span>
+                  <span className="text-[10px] text-white/20 ml-1">/ {targets.calories.toLocaleString()} kcal</span>
+                </div>
+              </div>
+              <Progress value={Math.min(100, ((profile.dailyStats?.calories ?? 0) / targets.calories) * 100)} className="h-1.5 bg-white/10" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {([
+                { label: 'Protein', val: profile.dailyStats?.protein ?? 0, target: targets.protein },
+                { label: 'Sugar',   val: profile.dailyStats?.sugar   ?? 0, target: targets.sugar   },
+                { label: 'Carbs',   val: profile.dailyStats?.carbs   ?? 0, target: targets.carbs   },
+                { label: 'Fats',    val: profile.dailyStats?.fats    ?? 0, target: targets.fats    },
+              ] as const).map(({ label, val, target }) => (
+                <div key={label} className="bg-white/5 border border-white/5 rounded-3xl p-5 space-y-2">
+                  <p className="text-[8px] font-bold uppercase text-white/30">{label}</p>
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-xl font-bold">{val}g</p>
+                    <p className="text-[8px] text-white/20">/ {target}g</p>
+                  </div>
+                  <Progress value={Math.min(100, (val / (target || 1)) * 100)} className="h-1 bg-white/10" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">

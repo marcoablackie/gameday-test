@@ -27,18 +27,35 @@ function minutesOfDay(hhmm: string): number {
   return h * 60 + m;
 }
 
+function scheduleNotif(delayMs: number, title: string, body: string) {
+  if (delayMs <= 0) return;
+  const timer = setTimeout(() => {
+    new Notification(title, { body, icon: '/favicon.ico', silent: false });
+  }, delayMs);
+  _timers.push(timer);
+}
+
 export function scheduleDayNotifications(
   schedule: ScheduleItem[],
   schoolStart = '08:00',
   schoolEnd = '15:00',
 ) {
   clearScheduledNotifications();
-
   if (!isNotificationPermitted()) return;
 
   const now = new Date();
   const schoolStartMins = minutesOfDay(schoolStart);
   const schoolEndMins = minutesOfDay(schoolEnd);
+
+  // Morning briefing at 7:00am (skip if it's already past)
+  const briefing = new Date();
+  briefing.setHours(7, 0, 0, 0);
+  if (briefing > now) {
+    const trainingBlocks = schedule.filter(s => s.type === 'training');
+    const nutritionBlocks = schedule.filter(s => s.type === 'nutrition');
+    const body = `⚡ ${trainingBlocks.length} drill${trainingBlocks.length !== 1 ? 's' : ''}, ${nutritionBlocks.length} fuel block${nutritionBlocks.length !== 1 ? 's' : ''} on the plan. Get after it.`;
+    scheduleNotif(briefing.getTime() - now.getTime(), 'Gameday Pro', body);
+  }
 
   for (const item of schedule) {
     if (item.type !== 'training' && item.type !== 'nutrition') continue;
@@ -47,23 +64,30 @@ export function scheduleDayNotifications(
     const blockTime = new Date();
     blockTime.setHours(h, m, 0, 0);
 
-    const alertTime = new Date(blockTime.getTime() - 15 * 60 * 1000);
-    if (alertTime <= now) continue;
+    const label = item.type === 'nutrition'
+      ? `🥗 ${item.activity}`
+      : `⚡ ${item.activity}`;
 
-    const alertMins = alertTime.getHours() * 60 + alertTime.getMinutes();
-    if (alertMins >= schoolStartMins && alertMins < schoolEndMins) continue;
+    // 15-minute warning
+    const warn15 = new Date(blockTime.getTime() - 15 * 60 * 1000);
+    const warn15Mins = warn15.getHours() * 60 + warn15.getMinutes();
+    const duringSchool = warn15Mins >= schoolStartMins && warn15Mins < schoolEndMins;
+    if (warn15 > now && !duringSchool) {
+      scheduleNotif(
+        warn15.getTime() - now.getTime(),
+        'Gameday Pro — 15 min',
+        `${label} starts in 15 minutes`,
+      );
+    }
 
-    const body =
-      item.type === 'nutrition'
-        ? `🥗 ${item.activity} — fuel up in 15 mins`
-        : `⚡ ${item.activity} starts in 15 mins`;
-
-    const delay = alertTime.getTime() - now.getTime();
-    const timer = setTimeout(() => {
-      new Notification('Gameday Pro', { body, icon: '/favicon.ico', silent: false });
-    }, delay);
-
-    _timers.push(timer);
+    // At-time reminder
+    if (blockTime > now) {
+      scheduleNotif(
+        blockTime.getTime() - now.getTime(),
+        'Gameday Pro — Now',
+        `${label} — time to go`,
+      );
+    }
   }
 }
 

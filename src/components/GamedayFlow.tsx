@@ -48,6 +48,7 @@ export type UserProfile = {
   xp: number;
   level: number;
   completedActivities: string[];
+  skippedActivities?: string[];
   dailyStats: DailyStats;
   height?: string;
   weight?: string;
@@ -272,6 +273,18 @@ export default function GamedayFlow() {
     }
   };
 
+  const skipActivity = (activityId: string) => {
+    if (!userRef || !effectiveProfile) return;
+    if (effectiveProfile.skippedActivities?.includes(activityId)) return;
+    const newSkipped = [...(effectiveProfile.skippedActivities || []), activityId];
+    reliableUpdate({ skippedActivities: newSkipped }).catch(console.error);
+    if (effectiveProfile && effectiveUser) {
+      const updated = { ...effectiveProfile, skippedActivities: newSkipped };
+      setCachedProfile(updated);
+      try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updated)); } catch {}
+    }
+  };
+
   const awardXP = (amount: number, activityId: string) => {
     if (!userRef || !effectiveProfile) return;
     if (effectiveProfile.completedActivities.includes(activityId)) return;
@@ -419,6 +432,8 @@ export default function GamedayFlow() {
           profile={effectiveProfile}
           onActivityClick={handleActivityClick}
           onNavClick={setCurrentScreen}
+          onComplete={(id, type) => awardXP(type === 'training' ? 50 : 25, id)}
+          onSkip={skipActivity}
         />
       )}
 

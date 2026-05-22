@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, Circle, XCircle, Zap, Bell, BellOff } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, Shield, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X } from 'lucide-react';
+import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
 import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -67,10 +68,14 @@ export default function Dashboard({
   profile,
   onActivityClick,
   onNavClick,
+  onComplete,
+  onSkip,
 }: {
   profile: UserProfile,
   onActivityClick: (item: any) => void,
   onNavClick: (screen: ScreenState) => void,
+  onComplete: (activityId: string, type: string) => void,
+  onSkip: (activityId: string) => void,
 }) {
   const db = useFirestore();
   const [myClub, setMyClub] = useState<{ id: string; name: string; logo: string } | null>(null);
@@ -203,10 +208,11 @@ export default function Dashboard({
   const sortedSchedule = useMemo(() => {
     if (!plan) return [];
     
-    const withMeta = plan.schedule.map((it) => ({ 
-      ...it, 
+    const withMeta = plan.schedule.map((it) => ({
+      ...it,
       isCompleted: profile.completedActivities?.includes(it.activity),
-      isPast: currentTime > it.time
+      isSkipped: profile.skippedActivities?.includes(it.activity),
+      isPast: currentTime > it.time,
     }));
 
     let activeIdx = -1;
@@ -238,27 +244,44 @@ export default function Dashboard({
     }
   };
 
+  const rank = getRank(profile.xp ?? 0);
+  const nextRank = getNextRank(profile.xp ?? 0);
+  const rankProgress = getRankProgress(profile.xp ?? 0);
+
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden animate-in fade-in duration-700">
-      <div className="px-6 pt-12 pb-4 flex justify-between items-center shrink-0">
-        <h3 className="text-xl font-headline font-bold uppercase tracking-tight">Daily Schedule</h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={async () => {
-              const granted = await requestNotificationPermission();
-              setNotifEnabled(granted);
-            }}
-            title={notifEnabled ? 'Notifications on' : 'Enable notifications'}
-            className="p-2 rounded-full text-white/20 hover:text-white transition-colors"
-          >
-            {notifEnabled ? <Bell size={16} className="text-primary" /> : <BellOff size={16} />}
-          </button>
-          <button onClick={() => onNavClick('settings')} className="relative group">
-            <Avatar className="h-10 w-10 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-pointer">
-              <AvatarImage src={avatar?.imageUrl} />
-              <AvatarFallback>PRO</AvatarFallback>
-            </Avatar>
-          </button>
+      <div className="px-6 pt-12 pb-4 shrink-0">
+        <div className="flex justify-between items-start">
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-headline font-bold uppercase tracking-tight">Daily Schedule</h3>
+            <div className="flex items-center gap-2">
+              <span className={cn("text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full", rank.bg, rank.color)}>
+                {rank.name}
+              </span>
+              <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">{profile.xp ?? 0} XP</span>
+              {nextRank && (
+                <span className="text-[8px] text-white/15 font-bold">→ {nextRank.name} at {nextRank.minXP}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const granted = await requestNotificationPermission();
+                setNotifEnabled(granted);
+              }}
+              title={notifEnabled ? 'Notifications on' : 'Enable notifications'}
+              className="p-2 rounded-full text-white/20 hover:text-white transition-colors"
+            >
+              {notifEnabled ? <Bell size={16} className="text-primary" /> : <BellOff size={16} />}
+            </button>
+            <button onClick={() => onNavClick('settings')} className="relative group">
+              <Avatar className="h-10 w-10 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-pointer">
+                <AvatarImage src={avatar?.imageUrl} />
+                <AvatarFallback>PRO</AvatarFallback>
+              </Avatar>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -347,7 +370,10 @@ export default function Dashboard({
                 const isCurrent = item.isCurrent;
                 const isPast = item.isPast;
                 const isCompleted = item.isCompleted;
+                const isSkipped = item.isSkipped;
                 const canClick = item.type === 'training' || item.type === 'nutrition';
+                const showYesNo = canClick && !isCompleted && !isSkipped && (isCurrent || isPast);
+                const showArrow = canClick && !isCompleted && !isSkipped && !isPast && !isCurrent;
 
                 const typeStyle: Record<string, string> = {
                   training: 'bg-primary/15 text-primary',
@@ -358,54 +384,73 @@ export default function Dashboard({
                 };
 
                 return (
-                  <button
+                  <div
                     key={idx}
-                    disabled={!canClick}
-                    onClick={() => canClick ? onActivityClick(item) : undefined}
                     className={cn(
-                      "w-full text-left flex items-center gap-3 px-3 py-3.5 rounded-xl transition-all duration-200 group",
+                      "w-full flex items-center gap-3 px-3 py-3.5 rounded-xl transition-all duration-200",
                       isCurrent && "bg-primary/8 ring-1 ring-inset ring-primary/20",
-                      !isCurrent && canClick && "hover:bg-white/4",
-                      isPast && !isCompleted && !isCurrent && "opacity-30",
-                      canClick ? "active:scale-[0.98] cursor-pointer" : "cursor-default"
+                      (isCompleted || isSkipped) && "opacity-40",
                     )}
                   >
-                    <span className="text-[9px] font-mono font-bold text-white/25 w-11 shrink-0 tabular-nums">
-                      {formatTo12h(item.time)}
-                    </span>
-
-                    <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0", typeStyle[item.type] ?? typeStyle.school)}>
-                      {getTypeIcon(item.type)}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "text-[13px] font-bold leading-tight truncate",
-                        isCurrent ? "text-white" : isCompleted ? "text-white/30 line-through decoration-white/20" : "text-white/70",
-                      )}>
-                        {item.activity}
-                      </p>
-                      {isCurrent && !isCompleted && (
-                        <span className="text-[8px] font-black uppercase tracking-[0.12em] text-primary">Active now</span>
+                    {/* Tappable left section → opens detail */}
+                    <button
+                      disabled={!canClick}
+                      onClick={() => canClick ? onActivityClick(item) : undefined}
+                      className={cn(
+                        "flex-1 flex items-center gap-3 min-w-0 text-left",
+                        canClick ? "active:opacity-70 cursor-pointer" : "cursor-default"
                       )}
-                      {isPast && !isCompleted && !isCurrent && (
-                        <span className="text-[8px] font-black uppercase tracking-widest text-red-500/50">Missed</span>
-                      )}
-                    </div>
+                    >
+                      <span className="text-[9px] font-mono font-bold text-white/25 w-11 shrink-0 tabular-nums">
+                        {formatTo12h(item.time)}
+                      </span>
 
+                      <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0", typeStyle[item.type] ?? typeStyle.school)}>
+                        {getTypeIcon(item.type)}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-[13px] font-bold leading-tight truncate",
+                          isCurrent ? "text-white" : isCompleted ? "text-white/30 line-through decoration-white/20" : isSkipped ? "text-white/20 line-through" : "text-white/70",
+                        )}>
+                          {item.activity}
+                        </p>
+                        {isCurrent && !isCompleted && !isSkipped && (
+                          <span className="text-[8px] font-black uppercase tracking-[0.12em] text-primary">Active now</span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Right side: status or YES/NO */}
                     <div className="shrink-0">
                       {isCompleted ? (
                         <CheckCircle2 size={15} className="text-emerald-500" />
-                      ) : isPast && !isCurrent ? (
-                        <XCircle size={13} className="text-white/10" />
-                      ) : canClick ? (
+                      ) : isSkipped ? (
+                        <XCircle size={13} className="text-red-500/40" />
+                      ) : showYesNo ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => onComplete(item.activity, item.type)}
+                            className="h-7 w-7 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center active:scale-90 transition-all hover:bg-emerald-500/20"
+                          >
+                            <Check size={11} className="text-emerald-400" />
+                          </button>
+                          <button
+                            onClick={() => onSkip(item.activity)}
+                            className="h-7 w-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-all hover:bg-white/10"
+                          >
+                            <X size={11} className="text-white/30" />
+                          </button>
+                        </div>
+                      ) : showArrow ? (
                         <ChevronRight size={13} className={cn(
                           "transition-colors",
-                          isCurrent ? "text-primary/50" : "text-white/10 group-hover:text-white/30"
+                          isCurrent ? "text-primary/50" : "text-white/15"
                         )} />
                       ) : null}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
