@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
 
   const prompt = `You are a sports nutrition coach for a young ${sport || 'athlete'} (${position || 'player'}).
 Their planned meal was: "${mealName || 'a performance meal'}".
-They only have these ingredients available: ${ingredients || 'basic pantry items'}.
+They have these ingredients available: ${ingredients || 'basic pantry items'}.
 
-Create ONE simple replacement meal using ONLY what they listed. Keep it quick (under 10 min), no special equipment, high-performance, and genuinely tasty.
+Create ONE simple replacement meal. Use whichever of those ingredients make the best combination — you do NOT need to use all of them, just pick what works well together. Keep it quick (under 10 min), no special equipment, high-performance, and genuinely tasty.
 
 Return ONLY valid JSON, no markdown fences:
 {
