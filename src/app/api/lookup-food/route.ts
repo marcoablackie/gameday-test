@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit, getIP } from '@/lib/rate-limit';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export async function POST(req: NextRequest) {
+  const { ok } = rateLimit(getIP(req), 'lookup-food');
+  if (!ok) return NextResponse.json({ error: 'Too many requests — try again in a minute.' }, { status: 429 });
+
   const apiKey = process.env.GOOGLE_GENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
 

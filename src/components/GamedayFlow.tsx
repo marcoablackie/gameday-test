@@ -15,6 +15,7 @@ import Quests from './screens/Quests';
 import Settings from './screens/Settings';
 import Fixtures from './screens/Fixtures';
 import PatchNotes from './PatchNotes';
+import FeedbackButton from './FeedbackButton';
 import PostGameDebrief from './PostGameDebrief';
 import TeamPicker from './TeamPicker';
 import { getSavedTeam, saveTeam, type SavedTeam } from '@/lib/fsc-data';
@@ -658,6 +659,11 @@ export default function GamedayFlow() {
           setShowPatchNotes(false);
           try { localStorage.setItem('gameday_version_seen', CURRENT_VERSION); } catch {}
         }} />
+      )}
+
+      {/* Feedback button — visible on main app screens, hidden on auth/onboarding */}
+      {effectiveProfile && ['dashboard', 'drill', 'meal', 'stats', 'food_tracker', 'drills_library', 'quests', 'fixtures', 'settings'].includes(currentScreen) && (
+        <FeedbackButton uid={effectiveUser?.uid} />
       )}
 
       {/* Post-game debrief overlay — rendered via separate state to avoid require() */}
