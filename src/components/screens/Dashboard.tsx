@@ -41,13 +41,14 @@ function findNextGame(data: FSCData, clubName: string, gradeKey?: string): NextG
         (f.homeTeam.name ?? '').toLowerCase().includes(q) ||
         (f.awayTeam.name ?? '').toLowerCase().includes(q)
       );
-  const todaySyd = now.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
   const upcoming = pool
     .filter(f => {
       const d = parseMatchDate(f.matchDate);
-      // Keep today's game even if kickoff has passed (match may still be in progress)
-      const dateSyd = d.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
-      return dateSyd === todaySyd || d >= now;
+      const msSinceKickoff = now.getTime() - d.getTime();
+      // Show today's game for up to 2.5 hours after kickoff (covers full match + extra time).
+      // After that it drops off and the next fixture shows automatically.
+      if (msSinceKickoff > 0 && msSinceKickoff <= 2.5 * 60 * 60 * 1000) return true;
+      return d >= now;
     })
     .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
   if (!upcoming[0]) return null;
