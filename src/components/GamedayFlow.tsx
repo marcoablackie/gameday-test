@@ -620,7 +620,7 @@ export default function GamedayFlow() {
         />
       )}
 
-      {currentScreen === 'food_tracker' && <FoodTracker onBack={() => setCurrentScreen('dashboard')} onNavClick={setCurrentScreen} onLogMeal={logMealStats} />}
+      {currentScreen === 'food_tracker' && <FoodTracker onBack={() => setCurrentScreen('dashboard')} onNavClick={setCurrentScreen} onLogMeal={logMealStats} uid={effectiveProfile?.uid} />}
 
       {currentScreen === 'quests' && effectiveProfile && (
         <Quests

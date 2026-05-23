@@ -30,16 +30,24 @@ export async function POST(req: NextRequest) {
         contents: [{
           parts: [
             {
-              text: `You are an elite sports nutritionist AI. Analyse this food photo.
-Return ONLY a JSON object with exactly these fields — no markdown, no extra text:
+              text: `You are an elite sports nutritionist AI. Analyse this food photo for an athlete.
+
+STEP 1 — Identify every visible food item in the photo separately.
+STEP 2 — Estimate a realistic athlete portion size for each item (not diet-book minimums).
+STEP 3 — Sum everything into one total.
+
+Common reference points: cooked chicken breast ~165 kcal/150g, white rice cooked ~200 kcal/cup, pasta cooked ~220 kcal/cup, eggs ~70 kcal each, avocado half ~120 kcal, banana ~100 kcal.
+If it looks like a restaurant or takeaway serve, use those realistic portions (larger).
+
+Return ONLY a JSON object — no markdown, no extra text:
 {
-  "foodName": "name of the food or dish",
-  "calories": <integer>,
-  "macros": { "protein": <g>, "carbs": <g>, "fats": <g>, "sugar": <g> },
-  "confidence": <0.0–1.0>,
-  "analysis": "one sentence mentioning the visible ingredients and why you estimated these values"
+  "foodName": "brief name of the overall meal or dish",
+  "calories": <integer — total for the whole plate>,
+  "macros": { "protein": <integer grams>, "carbs": <integer grams>, "fats": <integer grams>, "sugar": <integer grams> },
+  "confidence": <0.5–1.0 — lower if photo is unclear or partially visible>,
+  "analysis": "one sentence: list main items spotted, portion assumptions made"
 }
-Rules: athlete portion sizes (larger than average). Sum all visible items. If not food, use foodName "Unknown" with all zeros.`,
+If the image contains no food, return foodName "Unknown" with all zeros and confidence 0.`,
             },
             { inlineData: { mimeType: mimeType, data: base64Data } },
           ],

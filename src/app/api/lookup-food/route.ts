@@ -13,18 +13,27 @@ export async function POST(req: NextRequest) {
   const { foodDescription } = await req.json().catch(() => ({}));
   if (!foodDescription) return NextResponse.json({ error: 'No food description provided' }, { status: 400 });
 
-  const prompt = `You are an elite sports nutritionist AI. The athlete ate: "${foodDescription}".
+  const prompt = `You are an elite sports nutritionist AI. An athlete just told you what they ate:
+"${foodDescription}"
 
-Estimate the calories and macros for a typical athlete-sized portion of this food.
+Your job: estimate the total calories and macros for everything described.
+
+PARSING RULES:
+1. If quantities are given (e.g. "2 eggs", "200g chicken", "large bowl"), use them precisely.
+2. If no quantity is given, assume a standard athlete-sized portion (1.5–2× sedentary adult average).
+3. If multiple foods are listed, sum all of them into one total response.
+4. Common Australian foods to know: Weetbix (67 kcal/biscuit), Vegemite toast (~130 kcal/slice), Tim Tam (95 kcal/biscuit), Milo drink (~160 kcal/cup), meat pie (~450 kcal), sausage roll (~280 kcal), Up&Go (~180 kcal), Shapes crackers (~160 kcal/pack).
+5. For restaurant or fast food meals, use realistic serve sizes (not diet-book minimums).
+
 Return ONLY a JSON object — no markdown, no extra text:
 {
-  "foodName": "clean name for this food",
-  "calories": <integer>,
+  "foodName": "concise name summarising the full meal",
+  "calories": <integer — total for everything described>,
   "macros": { "protein": <integer grams>, "carbs": <integer grams>, "fats": <integer grams>, "sugar": <integer grams> },
-  "confidence": <0.0–1.0>,
-  "analysis": "one sentence explaining the estimate (key ingredients, portion assumptions)"
+  "confidence": <0.5–1.0 — lower when ambiguous>,
+  "analysis": "one sentence: list main items, portion assumptions, and any caveats"
 }
-Rules: use athlete/active person portion sizes (larger than sedentary average). If the input is not food, return foodName "Unknown" with all zeros.`;
+If the input is not food at all, return foodName "Unknown" with all zeros and confidence 0.`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,

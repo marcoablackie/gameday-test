@@ -10,14 +10,18 @@ import type { ScreenState, DailyStats } from '../GamedayFlow';
 
 type Mode = 'scan' | 'type';
 
+type FoodLogEntry = { name: string; calories: number; protein: number; carbs: number; fats: number; sugar: number };
+
 export default function FoodTracker({
   onBack,
   onNavClick,
-  onLogMeal
+  onLogMeal,
+  uid,
 }: {
   onBack: () => void,
   onNavClick: (screen: ScreenState) => void,
-  onLogMeal: (stats: DailyStats, foodName: string) => void
+  onLogMeal: (stats: DailyStats, foodName: string) => void,
+  uid?: string,
 }) {
   const [mode, setMode] = useState<Mode>('scan');
   const [analyzing, setAnalyzing] = useState(false);
@@ -29,6 +33,19 @@ export default function FoodTracker({
 
   // Manual text mode
   const [foodText, setFoodText] = useState('');
+
+  // Recent food history from today's log
+  const recentFoods: FoodLogEntry[] = React.useMemo(() => {
+    if (!uid) return [];
+    try {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+      const raw = localStorage.getItem(`gameday_food_log_${uid}_${today}`);
+      const entries: FoodLogEntry[] = raw ? JSON.parse(raw) : [];
+      // Deduplicate by name, most recent first
+      const seen = new Set<string>();
+      return entries.filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; }).reverse().slice(0, 5);
+    } catch { return []; }
+  }, [uid]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -160,6 +177,12 @@ export default function FoodTracker({
     if (mode === 'scan') startCamera();
   };
 
+  const quickLog = (entry: FoodLogEntry) => {
+    onLogMeal({ calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fats: entry.fats, sugar: entry.sugar }, entry.name);
+    setLogged(true);
+    setResult({ foodName: entry.name, calories: entry.calories, macros: { protein: entry.protein, carbs: entry.carbs, fats: entry.fats, sugar: entry.sugar }, confidence: 1, analysis: 'Re-logged from your history today.' });
+  };
+
   const switchMode = (m: Mode) => {
     setMode(m);
     setResult(null);
@@ -224,12 +247,12 @@ export default function FoodTracker({
 
       {/* TYPE MODE — manual input */}
       {mode === 'type' && !result && !analyzing && (
-        <div className="relative z-10 flex-1 flex flex-col px-6 pt-4 gap-4">
+        <div className="relative z-10 flex-1 flex flex-col px-6 pt-4 gap-4 overflow-y-auto pb-36">
           <p className="text-[10px] font-black uppercase tracking-widest text-white/30">What did you eat?</p>
           <textarea
             value={foodText}
             onChange={e => setFoodText(e.target.value)}
-            placeholder="e.g. 2 eggs on toast with avocado, bowl of oats with banana..."
+            placeholder="e.g. 2 eggs on toast with avocado, bowl of oats with banana, 200g chicken rice..."
             rows={4}
             className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-primary/50 font-medium"
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); } }}
@@ -242,8 +265,29 @@ export default function FoodTracker({
             <Search size={16} className="mr-2" /> Analyse
           </Button>
           <p className="text-[9px] font-black uppercase tracking-widest text-white/20 text-center">
-            Be specific — amounts &amp; ingredients help accuracy
+            Tip: include amounts for best accuracy — e.g. "2 eggs", "large bowl"
           </p>
+
+          {recentFoods.length > 0 && (
+            <div className="space-y-2 pt-2">
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Quick re-add</p>
+              <div className="flex flex-col gap-2">
+                {recentFoods.map((food, i) => (
+                  <button
+                    key={i}
+                    onClick={() => quickLog(food)}
+                    className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-left hover:bg-white/10 active:scale-[0.98] transition-all"
+                  >
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-white/80 truncate">{food.name}</p>
+                      <p className="text-[8px] text-white/30 font-medium">{food.calories} kcal · {food.protein}g protein</p>
+                    </div>
+                    <Plus size={14} className="text-primary/60 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -304,13 +348,25 @@ export default function FoodTracker({
             </div>
 
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] italic">{result.foodName}</p>
+              <div className="flex-1 min-w-0 pr-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] italic truncate">{result.foodName}</p>
+                  {result.confidence != null && (
+                    <span className={cn(
+                      "text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                      result.confidence >= 0.8 ? "bg-emerald-500/15 text-emerald-400" :
+                      result.confidence >= 0.6 ? "bg-yellow-500/15 text-yellow-400" :
+                      "bg-red-500/15 text-red-400"
+                    )}>
+                      {result.confidence >= 0.8 ? 'High confidence' : result.confidence >= 0.6 ? 'Estimate' : 'Low confidence'}
+                    </span>
+                  )}
+                </div>
                 <h4 className="text-4xl font-headline font-black italic uppercase tracking-tighter leading-none">
                   {result.calories} <span className="text-xs font-black text-white/20 not-italic uppercase tracking-widest">kcal</span>
                 </h4>
               </div>
-              <button onClick={resetScanner} className="p-2 rounded-full bg-white/5 border border-white/10 active:scale-90 transition-all">
+              <button onClick={resetScanner} className="p-2 rounded-full bg-white/5 border border-white/10 active:scale-90 transition-all shrink-0">
                 <RefreshCw size={16} className="text-white/50" />
               </button>
             </div>
