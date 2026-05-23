@@ -1,5 +1,5 @@
 export type GlobalClub = { id: string; name: string };
-export type GlobalLeague = { id: string; name: string; country: string; flag: string; clubs: GlobalClub[] };
+export type GlobalLeague = { id: string; name: string; country: string; flag: string; sport?: string; clubs: GlobalClub[] };
 
 export const GLOBAL_LEAGUES: GlobalLeague[] = [
   {
@@ -83,7 +83,7 @@ export const GLOBAL_LEAGUES: GlobalLeague[] = [
     ],
   },
   {
-    id: 'aleague', name: 'A-League', country: 'Australia', flag: '🇦🇺',
+    id: 'aleague', name: 'A-League', country: 'Australia', flag: '🇦🇺', sport: 'Soccer',
     clubs: [
       { id: 'melb_city', name: 'Melbourne City' },
       { id: 'melb_victory', name: 'Melbourne Victory' },
@@ -93,6 +93,109 @@ export const GLOBAL_LEAGUES: GlobalLeague[] = [
       { id: 'perth', name: 'Perth Glory' },
       { id: 'mariners', name: 'Central Coast Mariners' },
       { id: 'adelaide', name: 'Adelaide United' },
+    ],
+  },
+  // ── AFL ──────────────────────────────────────────────────────────────────
+  {
+    id: 'afl', name: 'AFL', country: 'Australia', flag: '🇦🇺', sport: 'AFL',
+    clubs: [
+      { id: 'adelaidecrows', name: 'Adelaide Crows' },
+      { id: 'brisbanelions', name: 'Brisbane Lions' },
+      { id: 'carlton', name: 'Carlton' },
+      { id: 'collingwood', name: 'Collingwood' },
+      { id: 'essendon', name: 'Essendon' },
+      { id: 'fremantle', name: 'Fremantle' },
+      { id: 'geelong', name: 'Geelong Cats' },
+      { id: 'goldcoastsuns', name: 'Gold Coast Suns' },
+      { id: 'gwssydney', name: 'GWS Giants' },
+      { id: 'hawthorn', name: 'Hawthorn' },
+      { id: 'melbournefc', name: 'Melbourne' },
+      { id: 'northmelbourne', name: 'North Melbourne' },
+      { id: 'portadelaide', name: 'Port Adelaide' },
+      { id: 'richmond', name: 'Richmond' },
+      { id: 'stkilda', name: 'St Kilda' },
+      { id: 'sydneyswans', name: 'Sydney Swans' },
+      { id: 'westcoasteagles', name: 'West Coast Eagles' },
+      { id: 'westernbulldogs', name: 'Western Bulldogs' },
+    ],
+  },
+  // ── NRL ──────────────────────────────────────────────────────────────────
+  {
+    id: 'nrl', name: 'NRL', country: 'Australia', flag: '🇦🇺', sport: 'Rugby League',
+    clubs: [
+      { id: 'broncos', name: 'Brisbane Broncos' },
+      { id: 'bulldogs', name: 'Canterbury Bulldogs' },
+      { id: 'cowboys', name: 'North Queensland Cowboys' },
+      { id: 'dolphins', name: 'Dolphins' },
+      { id: 'dragons', name: 'St George Illawarra Dragons' },
+      { id: 'eels', name: 'Parramatta Eels' },
+      { id: 'knights', name: 'Newcastle Knights' },
+      { id: 'panthers', name: 'Penrith Panthers' },
+      { id: 'rabbitos', name: 'South Sydney Rabbitohs' },
+      { id: 'raiders', name: 'Canberra Raiders' },
+      { id: 'roosters', name: 'Sydney Roosters' },
+      { id: 'sea_eagles', name: 'Manly Sea Eagles' },
+      { id: 'sharks', name: 'Cronulla Sharks' },
+      { id: 'storm', name: 'Melbourne Storm' },
+      { id: 'tigers', name: 'Wests Tigers' },
+      { id: 'titans', name: 'Gold Coast Titans' },
+      { id: 'warriors', name: 'New Zealand Warriors' },
+    ],
+  },
+  // ── NBL ──────────────────────────────────────────────────────────────────
+  {
+    id: 'nbl', name: 'NBL', country: 'Australia', flag: '🇦🇺', sport: 'Basketball',
+    clubs: [
+      { id: 'adelaide36ers', name: 'Adelaide 36ers' },
+      { id: 'brisbanebullets', name: 'Brisbane Bullets' },
+      { id: 'caimssnipas', name: 'Cairns Taipans' },
+      { id: 'illawarra', name: 'Illawarra Hawks' },
+      { id: 'melb_united', name: 'Melbourne United' },
+      { id: 'nz_breakers', name: 'New Zealand Breakers' },
+      { id: 'perth_wildcats', name: 'Perth Wildcats' },
+      { id: 'se_phoenix', name: 'South East Melbourne Phoenix' },
+      { id: 'sydney_kings', name: 'Sydney Kings' },
+    ],
+  },
+  // ── NBA ──────────────────────────────────────────────────────────────────
+  {
+    id: 'nba', name: 'NBA', country: 'United States', flag: '🇺🇸', sport: 'Basketball',
+    clubs: [
+      { id: 'lakers', name: 'Los Angeles Lakers' },
+      { id: 'warriors', name: 'Golden State Warriors' },
+      { id: 'celtics', name: 'Boston Celtics' },
+      { id: 'heat', name: 'Miami Heat' },
+      { id: 'bulls', name: 'Chicago Bulls' },
+      { id: 'nets', name: 'Brooklyn Nets' },
+      { id: 'knicks', name: 'New York Knicks' },
+      { id: 'bucks', name: 'Milwaukee Bucks' },
+      { id: 'nuggets', name: 'Denver Nuggets' },
+      { id: 'suns', name: 'Phoenix Suns' },
+    ],
+  },
+  // ── Super Rugby ──────────────────────────────────────────────────────────
+  {
+    id: 'superrugby', name: 'Super Rugby Pacific', country: 'Australia', flag: '🇦🇺', sport: 'Rugby Union',
+    clubs: [
+      { id: 'brumbies', name: 'Brumbies' },
+      { id: 'reds', name: 'Queensland Reds' },
+      { id: 'rebels', name: 'Melbourne Rebels' },
+      { id: 'waratahs', name: 'NSW Waratahs' },
+      { id: 'forceau', name: 'Western Force' },
+    ],
+  },
+  // ── Super Netball ─────────────────────────────────────────────────────────
+  {
+    id: 'supernetball', name: 'Super Netball', country: 'Australia', flag: '🇦🇺', sport: 'Netball',
+    clubs: [
+      { id: 'adelaidethunderbirds', name: 'Adelaide Thunderbirds' },
+      { id: 'collingwoodmagpies', name: 'Collingwood Magpies' },
+      { id: 'giantnetball', name: 'Giants Netball' },
+      { id: 'melb_vixens', name: 'Melbourne Vixens' },
+      { id: 'nswswifts', name: 'NSW Swifts' },
+      { id: 'qld_firebirds', name: 'Queensland Firebirds' },
+      { id: 'sunshine_coast', name: 'Sunshine Coast Lightning' },
+      { id: 'west_coast_fever', name: 'West Coast Fever' },
     ],
   },
 ];

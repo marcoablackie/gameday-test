@@ -2,25 +2,20 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronLeft, LogOut, User, Ruler, Clock, Shield, Globe } from 'lucide-react';
+import { ChevronLeft, LogOut, User, Ruler, Clock, Shield, Globe, Search, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import type { UserProfile } from '../GamedayFlow';
 import { COUNTRIES, leaguesForCountry, leagueById } from '@/lib/global-leagues';
+import { SPORT_NAMES, getSportConfig } from '@/lib/sports-config';
 import { cn } from '@/lib/utils';
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-const SPORT_POSITIONS: Record<string, string[]> = {
-  Basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'],
-  Soccer: ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'],
-  Football: ['Quarterback', 'Running Back', 'Wide Receiver', 'Tight End', 'Lineman', 'Linebacker', 'Defensive Back'],
-  Tennis: ['Baseline Player', 'Serve & Volleyer', 'All-Court Player'],
-};
 
 const TIME_OPTIONS = Array.from({ length: 24 }).map((_, i) => {
   const hour = i.toString().padStart(2, '0');
@@ -61,6 +56,34 @@ export default function Settings({
   const proLeagues = proCountry ? leaguesForCountry(proCountry) : [];
   const proClubs = proLeagueId ? (leagueById(proLeagueId)?.clubs ?? []) : [];
 
+  // My team search (TheSportsDB — for non-soccer / all sports live fixtures)
+  const [teamQuery, setTeamQuery] = useState('');
+  const [teamResults, setTeamResults] = useState<Array<{ idTeam: string; strTeam: string; strBadge: string; strLeague: string; strCountry: string }>>([]);
+  const [teamSearching, setTeamSearching] = useState(false);
+  const [linkedTeam, setLinkedTeam] = useState<{ idTeam: string; strTeam: string; strBadge: string } | null>(() => {
+    try { const r = localStorage.getItem('gameday_sportsdb_team'); return r ? JSON.parse(r) : null; } catch { return null; }
+  });
+
+  const searchTeams = async () => {
+    if (teamQuery.trim().length < 2) return;
+    setTeamSearching(true);
+    setTeamResults([]);
+    try {
+      const res = await fetch(`/api/search-teams?q=${encodeURIComponent(teamQuery.trim())}&sport=${encodeURIComponent(profile.sport)}`);
+      const data = await res.json();
+      setTeamResults(data.teams ?? []);
+    } catch {}
+    setTeamSearching(false);
+  };
+
+  const linkTeam = (t: { idTeam: string; strTeam: string; strBadge: string }) => {
+    const entry = { idTeam: t.idTeam, strTeam: t.strTeam, strBadge: t.strBadge };
+    try { localStorage.setItem('gameday_sportsdb_team', JSON.stringify(entry)); } catch {}
+    setLinkedTeam(entry);
+    setTeamResults([]);
+    setTeamQuery('');
+  };
+
   const handleLogout = async () => {
     try { localStorage.removeItem('gameday_last_uid'); } catch {}
     if (auth) await signOut(auth);
@@ -92,7 +115,7 @@ export default function Settings({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-white/20">
-                    {Object.keys(SPORT_POSITIONS).map(sport => (
+                    {SPORT_NAMES.map(sport => (
                       <SelectItem key={sport} value={sport}>{sport}</SelectItem>
                     ))}
                   </SelectContent>
@@ -106,7 +129,7 @@ export default function Settings({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-white/20">
-                    {(SPORT_POSITIONS[profile.sport] || []).map(pos => (
+                    {getSportConfig(profile.sport).positions.map(pos => (
                       <SelectItem key={pos} value={pos}>{pos}</SelectItem>
                     ))}
                   </SelectContent>
@@ -305,6 +328,84 @@ export default function Settings({
               )}
             </div>
           </div>
+
+          {/* ── My Playing Team (live fixtures — non-soccer sports) ── */}
+          {profile.sport !== 'Soccer' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                <Search size={14} className="text-primary" />
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">My Playing Team</h4>
+              </div>
+
+              {linkedTeam && (
+                <div className="flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-4 py-3">
+                  {linkedTeam.strBadge && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={linkedTeam.strBadge} alt="" className="h-8 w-8 object-contain rounded" />
+                  )}
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">{linkedTeam.strTeam}</p>
+                    <p className="text-[8px] text-white/30 uppercase tracking-wider">Linked for live fixtures</p>
+                  </div>
+                  <button
+                    onClick={() => { try { localStorage.removeItem('gameday_sportsdb_team'); } catch {} setLinkedTeam(null); }}
+                    className="text-[8px] font-bold uppercase tracking-widest text-white/30 hover:text-white/60"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <Label className="text-[8px] font-bold uppercase text-white/30 tracking-widest">Search your team for live fixtures</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={14} />
+                    <Input
+                      value={teamQuery}
+                      onChange={e => setTeamQuery(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && searchTeams()}
+                      placeholder={`Search ${profile.sport} team…`}
+                      className="pl-9 h-11 bg-white/5 border-white/10 text-xs placeholder:text-white/20"
+                    />
+                  </div>
+                  <button
+                    onClick={searchTeams}
+                    disabled={teamSearching || teamQuery.trim().length < 2}
+                    className="h-11 px-4 rounded-xl bg-primary text-black text-[10px] font-black uppercase tracking-widest disabled:opacity-40 flex items-center gap-1"
+                  >
+                    {teamSearching ? <Loader2 size={14} className="animate-spin" /> : 'Search'}
+                  </button>
+                </div>
+
+                {teamResults.length > 0 && (
+                  <div className="space-y-2">
+                    {teamResults.map(t => (
+                      <button
+                        key={t.idTeam}
+                        onClick={() => linkTeam(t)}
+                        className="w-full flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-left hover:bg-white/10 transition-all active:scale-[0.98]"
+                      >
+                        {t.strBadge && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={t.strBadge} alt="" className="h-8 w-8 object-contain rounded shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black uppercase tracking-wider truncate">{t.strTeam}</p>
+                          <p className="text-[8px] text-white/40 uppercase tracking-widest">{t.strLeague} • {t.strCountry}</p>
+                        </div>
+                        <CheckCircle2 size={16} className="text-primary/40 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!teamSearching && teamResults.length === 0 && teamQuery.length > 0 && (
+                  <p className="text-[9px] text-white/30 text-center py-2">No results — try a different name</p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="pt-10 border-t border-white/5 flex flex-col gap-4">
              <Button

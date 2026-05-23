@@ -15,6 +15,7 @@ import { setDocViaRest } from '@/firebase/firestore/rest-write';
 import { cn } from '@/lib/utils';
 import type { UserProfile, ScreenState, DailyStats } from '../GamedayFlow';
 import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, getSavedTeam, fixturesForTeam, type FSCFixture, type FSCData } from '@/lib/fsc-data';
+import { getSportConfig } from '@/lib/sports-config';
 
 type Snack = { name: string; benefit: string; steps: string[]; kcal: number; protein: number; carbs: number; fats: number };
 
@@ -94,21 +95,55 @@ export default function Dashboard({
   const [nextGame, setNextGame] = useState<NextGame | null>(null);
 
   useEffect(() => {
-    try {
-      // Prefer team-level selection; fall back to club-only legacy key
-      const team = getSavedTeam();
-      if (team) {
-        setMyClub({ id: team.clubId, name: team.clubName, logo: team.clubLogo });
-        loadFSCData().then(data => setNextGame(findNextGame(data, team.clubName, team.gradeKey))).catch(() => {});
-      } else {
-        const raw = localStorage.getItem('gameday_my_club');
-        if (raw) {
-          const club = JSON.parse(raw);
-          setMyClub(club);
-          loadFSCData().then(data => setNextGame(findNextGame(data, club.name))).catch(() => {});
+    async function loadGameCard() {
+      try {
+        // 1. Try FSC (Australian soccer grade-level data)
+        const team = getSavedTeam();
+        if (team) {
+          setMyClub({ id: team.clubId, name: team.clubName, logo: team.clubLogo });
+          const data = await loadFSCData();
+          setNextGame(findNextGame(data, team.clubName, team.gradeKey));
+          return;
         }
-      }
-    } catch {}
+        const rawClub = localStorage.getItem('gameday_my_club');
+        if (rawClub) {
+          const club = JSON.parse(rawClub);
+          setMyClub(club);
+          const data = await loadFSCData();
+          setNextGame(findNextGame(data, club.name));
+          return;
+        }
+      } catch {}
+
+      // 2. Fall back to TheSportsDB team (non-soccer / other sports)
+      try {
+        const raw = localStorage.getItem('gameday_sportsdb_team');
+        if (!raw) return;
+        const sdbTeam: { idTeam: string; strTeam: string; strBadge: string } = JSON.parse(raw);
+        setMyClub({ id: sdbTeam.idTeam, name: sdbTeam.strTeam, logo: sdbTeam.strBadge });
+        const res = await fetch(`/api/team-fixtures?id=${sdbTeam.idTeam}`);
+        if (!res.ok) return;
+        const { fixtures } = await res.json();
+        if (!fixtures?.length) return;
+        const now = new Date();
+        const upcoming = fixtures
+          .filter((f: any) => {
+            const d = new Date(f.matchDate);
+            const msSince = now.getTime() - d.getTime();
+            if (msSince > 0 && msSince <= 2.5 * 60 * 60 * 1000) return true;
+            return d >= now;
+          })
+          .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+        if (upcoming[0]) {
+          const f = upcoming[0];
+          setNextGame({
+            ...f,
+            matchDate: f.matchDate,
+          });
+        }
+      } catch {}
+    }
+    loadGameCard();
   }, []);
   const planCacheKey = `gameday_plan_${profile.uid}_${new Date().toISOString().split('T')[0]}`;
   const [plan, setPlan] = useState<GeneratePersonalizedTrainingPlanOutput | null>(() => {
@@ -214,6 +249,7 @@ export default function Dashboard({
         todayDayOfWeek,
         isWeekend,
         isGameDay,
+        sportContext: getSportConfig(profile.sport).aiContext,
       });
 
       const planData = { ...result, uid: profile.uid, date: todayStr, createdAt: new Date().toISOString() };

@@ -8,27 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { UserProfile } from '../GamedayFlow';
-
-const ABILITIES_MAP: Record<string, string[]> = {
-  Basketball: ['Speed', 'Shooting', 'Passing', 'Defense', 'IQ', 'Agility'],
-  Soccer: ['Stamina', 'Dribbling', 'Passing', 'Tackling', 'Finishing', 'Pace'],
-  Football: ['Strength', 'Power', 'Speed', 'Route Running', 'Catching', 'Blocking'],
-  Tennis: ['Footwork', 'Serve', 'Forehand', 'Backhand', 'Mental', 'Reaction'],
-};
-
-const IMPROVEMENTS_MAP: Record<string, string[]> = {
-  Basketball: ['Endurance', 'Ball Handling', 'Rebounding', 'Free Throws', 'Post-up'],
-  Soccer: ['Tactical Sense', 'Crosses', 'Weak Foot', 'Heading', 'Set Pieces'],
-  Football: ['Explosiveness', 'Vision', 'Technique', 'Flexibility', 'Endurance'],
-  Tennis: ['Net Play', 'Second Serve', 'Drop Shots', 'Slice', 'Physicality'],
-};
-
-const SPORT_POSITIONS: Record<string, string[]> = {
-  Basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'],
-  Soccer: ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'],
-  Football: ['Quarterback', 'Running Back', 'Wide Receiver', 'Tight End', 'Lineman', 'Linebacker', 'Defensive Back'],
-  Tennis: ['Baseline Player', 'Serve & Volleyer', 'All-Court Player'],
-};
+import { SPORTS_CONFIG, SPORT_NAMES, getSportConfig } from '@/lib/sports-config';
 
 const TIME_OPTIONS = Array.from({ length: 24 }).map((_, i) => {
   const hour = i.toString().padStart(2, '0');
@@ -59,11 +39,11 @@ export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => 
     dailyStats: { calories: 0, protein: 0, carbs: 0, fats: 0, sugar: 0 }
   });
 
-  const availableAbilities = useMemo(() => ABILITIES_MAP[profile.sport] || [], [profile.sport]);
-  const availableImprovements = useMemo(() => IMPROVEMENTS_MAP[profile.sport] || [], [profile.sport]);
+  const availableAbilities = useMemo(() => getSportConfig(profile.sport).abilities, [profile.sport]);
+  const availableImprovements = useMemo(() => getSportConfig(profile.sport).improvements, [profile.sport]);
 
   useEffect(() => {
-    const availablePositions = SPORT_POSITIONS[profile.sport] || [];
+    const availablePositions = getSportConfig(profile.sport).positions;
     if (!availablePositions.includes(profile.position)) {
       setProfile(p => ({ 
         ...p, 
@@ -121,7 +101,7 @@ export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => 
                 <SelectValue placeholder="Sport" />
               </SelectTrigger>
               <SelectContent className="bg-card border-white/20">
-                {Object.keys(SPORT_POSITIONS).map(sport => (
+                {SPORT_NAMES.map(sport => (
                   <SelectItem key={sport} value={sport}>{sport}</SelectItem>
                 ))}
               </SelectContent>
@@ -135,7 +115,7 @@ export default function Onboarding({ onNext }: { onNext: (data: UserProfile) => 
                 <SelectValue placeholder="Position" />
               </SelectTrigger>
               <SelectContent className="bg-card border-white/20">
-                {(SPORT_POSITIONS[profile.sport] || []).map(pos => (
+                {getSportConfig(profile.sport).positions.map(pos => (
                   <SelectItem key={pos} value={pos}>{pos}</SelectItem>
                 ))}
               </SelectContent>

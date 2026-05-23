@@ -23,6 +23,7 @@ const GeneratePersonalizedTrainingPlanInputSchema = z.object({
   todayDayOfWeek: z.string().optional().describe('Current day of week short name, e.g. "Mon", "Tue"'),
   isWeekend: z.boolean().optional().describe('True if today is Saturday or Sunday'),
   isGameDay: z.boolean().optional().describe('True if the athlete has a match scheduled for today'),
+  sportContext: z.string().optional().describe('Sport-specific coaching context: game structure, physical demands, training notes'),
 });
 
 const GeneratePersonalizedTrainingPlanOutputSchema = z.object({
@@ -50,7 +51,9 @@ const prompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedTrainingPlanInputSchema },
   output: { schema: GeneratePersonalizedTrainingPlanOutputSchema },
   prompt: `You are a professional performance coach. Create a realistic daily protocol.
-
+{{#if sportContext}}
+Sport Context: {{{sportContext}}}
+{{/if}}
 Athlete: {{{sport}}} ({{{position}}})
 Physicals: {{#if height}}{{{height}}}{{/if}} {{#if weight}}{{{weight}}}{{/if}}
 Targeting: {{#each areaToImprove}}{{{this}}}, {{/each}}

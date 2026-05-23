@@ -596,6 +596,7 @@ export default function GamedayFlow() {
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
           onDrillClick={(d) => { setSelectedActivity({ ...d, type: 'training' }); setCurrentScreen('drill'); }}
+          sport={effectiveProfile?.sport}
         />
       )}
 
