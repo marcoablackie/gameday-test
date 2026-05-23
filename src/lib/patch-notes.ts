@@ -1,6 +1,19 @@
-export const CURRENT_VERSION = '1.4.0';
+export const CURRENT_VERSION = '1.5.0';
 
 export const PATCH_NOTES: { version: string; date: string; changes: string[] }[] = [
+  {
+    version: '1.5.0',
+    date: 'May 2026',
+    changes: [
+      'Instant load — returning athletes go straight to the dashboard without any loading spinner',
+      'Fixture Scanner — screenshot your fixture schedule from WhatsApp, your club site, or any app and AI imports all your games automatically',
+      '11 sports — Soccer, Basketball, AFL, Rugby League, Rugby Union, Netball, Cricket, Tennis, Swimming, Athletics, American Football all fully supported with positions, drills, and AI coaching context',
+      'Sport-specific drill library — 12 drills per sport, randomised daily, filterable by category',
+      'Live fixtures for all sports — search your team in Settings to get game card from any league worldwide',
+      'Calorie AI upgrade — better Australian food awareness, quantity parsing, and confidence indicator',
+      'Food history quick-add — re-log today\'s previous meals in one tap',
+    ],
+  },
   {
     version: '1.4.0',
     date: 'May 2026',

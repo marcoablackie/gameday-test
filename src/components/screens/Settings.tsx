@@ -38,12 +38,14 @@ export default function Settings({
   profile,
   onBack,
   onChangeTeam,
-  onUpdateProfile
+  onUpdateProfile,
+  onFixtureScanner,
 }: {
   profile: UserProfile,
   onBack: () => void,
   onChangeTeam: () => void,
-  onUpdateProfile: (data: Partial<UserProfile>) => void
+  onUpdateProfile: (data: Partial<UserProfile>) => void,
+  onFixtureScanner: () => void,
 }) {
   const auth = useAuth();
 
@@ -408,6 +410,13 @@ export default function Settings({
           )}
 
           <div className="pt-10 border-t border-white/5 flex flex-col gap-4">
+             <Button
+               variant="outline"
+               className="h-14 rounded-xl border-white/10 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/5"
+               onClick={onFixtureScanner}
+             >
+               <Search size={16} /> Scan Fixture Schedule
+             </Button>
              <Button
                variant="outline"
                className="h-14 rounded-xl border-white/10 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/5"

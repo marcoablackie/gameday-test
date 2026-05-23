@@ -22,7 +22,7 @@ export default function FeedbackButton({ uid }: { uid?: string }) {
           uid: uid || 'anonymous',
           message: text.trim(),
           timestamp: new Date().toISOString(),
-          appVersion: '1.4.0',
+          appVersion: '1.5.0',
         });
       }
       setSent(true);

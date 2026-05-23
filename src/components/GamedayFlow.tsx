@@ -14,6 +14,7 @@ import FoodTracker from './screens/FoodTracker';
 import Quests from './screens/Quests';
 import Settings from './screens/Settings';
 import Fixtures from './screens/Fixtures';
+import FixtureScanner from './screens/FixtureScanner';
 import PatchNotes from './PatchNotes';
 import FeedbackButton from './FeedbackButton';
 import PostGameDebrief from './PostGameDebrief';
@@ -67,7 +68,7 @@ export type UserProfile = {
   debriefedFixtureIds?: string[];
 };
 
-export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures';
+export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures' | 'fixture_scanner';
 
 // Lazy-loads fixture data then renders the debrief modal
 function PendingDebriefLoader({ fixtureId, onSubmit, onSkip }: {
@@ -136,8 +137,18 @@ export default function GamedayFlow() {
   const userRef = useMemo(() => (db && effectiveUser ? doc(db, 'users', effectiveUser.uid) : null), [db, effectiveUser]);
   const { data: profile, loading: profileLoading, error } = useDoc<UserProfile>(userRef);
 
-  // Cache profile in localStorage so the app works when Firestore is slow/offline
-  const [cachedProfile, setCachedProfile] = useState<UserProfile | null>(null);
+  // Cache profile in localStorage so the app works when Firestore is slow/offline.
+  // Initialize immediately from localStorage so returning users see the dashboard on first render
+  // without waiting for Firebase Auth to resolve.
+  const [cachedProfile, setCachedProfile] = useState<UserProfile | null>(() => {
+    try {
+      if (typeof window === 'undefined') return null;
+      const uid = localStorage.getItem('gameday_last_uid');
+      if (!uid) return null;
+      const stored = localStorage.getItem(`gameday_profile_${uid}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
 
   type FoodEntry = { name: string; calories: number; protein: number; carbs: number; fats: number; sugar: number; time: string };
   const [todayFoodLog, setTodayFoodLog] = useState<FoodEntry[]>(() => {
@@ -496,7 +507,9 @@ export default function GamedayFlow() {
     setCurrentScreen('paywall');
   };
 
-  if (authLoading) {
+  // Only block on auth loading when we have no cached profile to show.
+  // Returning users with a cached profile go straight to the dashboard instantly.
+  if (authLoading && !cachedProfile) {
     return (
       <div className="flex-1 bg-background flex flex-col items-center justify-center gap-4">
         <div className="animate-spin h-8 w-8 border-t-2 border-primary rounded-full" />
@@ -617,6 +630,7 @@ export default function GamedayFlow() {
           onBack={() => setCurrentScreen('dashboard')}
           onChangeTeam={() => setShowTeamPicker(true)}
           onUpdateProfile={updateProfile}
+          onFixtureScanner={() => setCurrentScreen('fixture_scanner')}
         />
       )}
 
@@ -635,6 +649,14 @@ export default function GamedayFlow() {
         <Fixtures
           onBack={() => setCurrentScreen('dashboard')}
           onNavClick={setCurrentScreen}
+        />
+      )}
+
+      {currentScreen === 'fixture_scanner' && effectiveProfile && (
+        <FixtureScanner
+          uid={effectiveProfile.uid}
+          onBack={() => setCurrentScreen('settings')}
+          onSaved={() => setCurrentScreen('dashboard')}
         />
       )}
 

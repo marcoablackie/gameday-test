@@ -118,13 +118,13 @@ export default function Dashboard({
       // 2. Fall back to TheSportsDB team (non-soccer / other sports)
       try {
         const raw = localStorage.getItem('gameday_sportsdb_team');
-        if (!raw) return;
+        if (!raw) throw new Error('no sportsdb team');
         const sdbTeam: { idTeam: string; strTeam: string; strBadge: string } = JSON.parse(raw);
         setMyClub({ id: sdbTeam.idTeam, name: sdbTeam.strTeam, logo: sdbTeam.strBadge });
         const res = await fetch(`/api/team-fixtures?id=${sdbTeam.idTeam}`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error('sportsdb fetch failed');
         const { fixtures } = await res.json();
-        if (!fixtures?.length) return;
+        if (!fixtures?.length) throw new Error('no fixtures');
         const now = new Date();
         const upcoming = fixtures
           .filter((f: any) => {
@@ -136,15 +136,48 @@ export default function Dashboard({
           .sort((a: any, b: any) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
         if (upcoming[0]) {
           const f = upcoming[0];
-          setNextGame({
+          setNextGame({ ...f, matchDate: f.matchDate });
+          return;
+        }
+      } catch {}
+
+      // 3. Fall back to manually-scanned fixtures
+      try {
+        const rawManual = localStorage.getItem(`gameday_manual_fixtures_${profile.uid}`);
+        if (!rawManual) return;
+        const manual: Array<{ id: string; date: string; time: string | null; opponent: string; venue: string | null; isHome: boolean | null }> = JSON.parse(rawManual);
+        const now = new Date();
+        const upcoming = manual
+          .map(f => ({
             ...f,
+            matchDate: f.date + (f.time ? `T${f.time}:00` : 'T09:00:00'),
+          }))
+          .filter(f => {
+            const d = new Date(f.matchDate);
+            const msSince = now.getTime() - d.getTime();
+            if (msSince > 0 && msSince <= 2.5 * 60 * 60 * 1000) return true;
+            return d >= now;
+          })
+          .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+        if (upcoming[0]) {
+          const f = upcoming[0];
+          setNextGame({
             matchDate: f.matchDate,
-          });
+            homeTeam: { name: f.isHome ? profile.sport + ' Team' : f.opponent, logo: '' },
+            awayTeam: { name: f.isHome ? f.opponent : profile.sport + ' Team', logo: '' },
+            homeScore: null, awayScore: null,
+            status: '', league: '',
+            isHome: f.isHome ?? true,
+            opponentName: f.opponent,
+            opponentLogo: '',
+            venue: f.venue || '',
+            source: 'manual',
+          } as any);
         }
       } catch {}
     }
     loadGameCard();
-  }, []);
+  }, [profile.uid]);
   const planCacheKey = `gameday_plan_${profile.uid}_${new Date().toISOString().split('T')[0]}`;
   const [plan, setPlan] = useState<GeneratePersonalizedTrainingPlanOutput | null>(() => {
     try {
