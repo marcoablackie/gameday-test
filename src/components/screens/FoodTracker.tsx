@@ -2,11 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Camera, Loader2, CheckCircle2, Home, Dumbbell, BarChart2, AlertCircle, Plus, Zap, Scan, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Camera, Loader2, CheckCircle2, Home, Dumbbell, BarChart2, AlertCircle, Plus, Zap, Scan, RefreshCw, PenLine, Search } from 'lucide-react';
 import type { AnalyzeFoodOutput } from '@/ai/flows/analyze-food-photo';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import type { ScreenState, DailyStats } from '../GamedayFlow';
+
+type Mode = 'scan' | 'type';
 
 export default function FoodTracker({
   onBack,
@@ -17,6 +19,7 @@ export default function FoodTracker({
   onNavClick: (screen: ScreenState) => void,
   onLogMeal: (stats: DailyStats, foodName: string) => void
 }) {
+  const [mode, setMode] = useState<Mode>('scan');
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalyzeFoodOutput | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -24,39 +27,41 @@ export default function FoodTracker({
   const [logged, setLogged] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
 
+  // Manual text mode
+  const [foodText, setFoodText] = useState('');
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!result && !preview) {
+    if (mode === 'scan' && !result && !preview) {
       startCamera();
+    } else if (mode === 'type') {
+      stopCamera();
     }
     return () => stopCamera();
-  }, [result, preview]);
+  }, [mode, result, preview]);
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
       }
-    } catch (err) {
-      console.error("Camera access denied:", err);
+    } catch {
       setCameraActive(false);
-      setError("Camera access denied. Allow camera permissions to use the scanner.");
+      setError("Camera access denied. Allow camera permissions or use Type mode.");
     }
   };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
       videoRef.current.srcObject = null;
     }
+    setCameraActive(false);
   };
 
   const compressToDataUri = (src: HTMLVideoElement | HTMLImageElement, maxDim = 900): string => {
@@ -83,7 +88,6 @@ export default function FoodTracker({
     setError(null);
     setLogged(false);
     stopCamera();
-
     try {
       const res = await fetch('/api/analyze-food', {
         method: 'POST',
@@ -94,8 +98,29 @@ export default function FoodTracker({
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
       setResult(data as AnalyzeFoodOutput);
     } catch (err: any) {
-      console.error("Food photo analysis failed:", err);
       setError(err?.message || "Analysis failed. Please try again.");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const lookupFood = async () => {
+    if (!foodText.trim()) return;
+    setAnalyzing(true);
+    setResult(null);
+    setError(null);
+    setLogged(false);
+    try {
+      const res = await fetch('/api/lookup-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foodDescription: foodText.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      setResult(data as AnalyzeFoodOutput);
+    } catch (err: any) {
+      setError(err?.message || "Lookup failed. Please try again.");
     } finally {
       setAnalyzing(false);
     }
@@ -131,40 +156,99 @@ export default function FoodTracker({
     setPreview(null);
     setError(null);
     setLogged(false);
-    startCamera();
+    setFoodText('');
+    if (mode === 'scan') startCamera();
+  };
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setResult(null);
+    setPreview(null);
+    setError(null);
+    setLogged(false);
+    setFoodText('');
   };
 
   return (
     <div className="flex flex-col h-full bg-black relative overflow-hidden">
 
-      {/* Fullscreen camera / preview background */}
-      <div className="absolute inset-0">
-        {preview ? (
-          <Image src={preview} alt="Capture" fill className="object-cover" />
-        ) : (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        )}
-      </div>
+      {/* Fullscreen camera / preview background — only in scan mode */}
+      {mode === 'scan' && (
+        <div className="absolute inset-0">
+          {preview ? (
+            <Image src={preview} alt="Capture" fill className="object-cover" />
+          ) : (
+            <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+          )}
+        </div>
+      )}
+
+      {/* Dark background for type mode */}
+      {mode === 'type' && <div className="absolute inset-0 bg-background" />}
 
       {/* Top gradient + header */}
       <div className="relative z-10">
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
-        <div className="relative px-6 pt-10 pb-6 flex items-center gap-4">
+        <div className="relative px-6 pt-10 pb-4 flex items-center gap-4">
           <button onClick={onBack} className="p-3 rounded-full bg-black/40 border border-white/20 backdrop-blur-sm active:scale-90 transition-all">
             <ChevronLeft size={20} />
           </button>
-          <h3 className="text-lg font-headline font-black italic uppercase flex-1 text-center pr-10 tracking-tight drop-shadow-lg">Macro Vision</h3>
+          <h3 className="text-lg font-headline font-black italic uppercase flex-1 text-center tracking-tight drop-shadow-lg">Macro Vision</h3>
+          <div className="w-11" />
+        </div>
+
+        {/* Mode toggle */}
+        <div className="relative px-6 pb-4">
+          <div className="flex bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => switchMode('scan')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                mode === 'scan' ? "bg-primary text-primary-foreground" : "text-white/40"
+              )}
+            >
+              <Camera size={12} /> Scan
+            </button>
+            <button
+              onClick={() => switchMode('type')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                mode === 'type' ? "bg-primary text-primary-foreground" : "text-white/40"
+              )}
+            >
+              <PenLine size={12} /> Type It
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Viewfinder corners */}
-      {!preview && cameraActive && !analyzing && (
+      {/* TYPE MODE — manual input */}
+      {mode === 'type' && !result && !analyzing && (
+        <div className="relative z-10 flex-1 flex flex-col px-6 pt-4 gap-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/30">What did you eat?</p>
+          <textarea
+            value={foodText}
+            onChange={e => setFoodText(e.target.value)}
+            placeholder="e.g. 2 eggs on toast with avocado, bowl of oats with banana..."
+            rows={4}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-primary/50 font-medium"
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); } }}
+          />
+          <Button
+            onClick={lookupFood}
+            disabled={!foodText.trim()}
+            className="w-full h-13 rounded-xl font-black uppercase italic bg-primary text-primary-foreground neon-glow disabled:opacity-40"
+          >
+            <Search size={16} className="mr-2" /> Analyse
+          </Button>
+          <p className="text-[9px] font-black uppercase tracking-widest text-white/20 text-center">
+            Be specific — amounts &amp; ingredients help accuracy
+          </p>
+        </div>
+      )}
+
+      {/* SCAN MODE helpers */}
+      {mode === 'scan' && !preview && cameraActive && !analyzing && (
         <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center gap-3">
           <div className="relative w-64 h-64">
             <div className="absolute top-0 left-0 w-10 h-10 border-t-2 border-l-2 border-white/70 rounded-tl-xl" />
@@ -178,25 +262,27 @@ export default function FoodTracker({
 
       {/* Analyzing overlay */}
       {analyzing && (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-20">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-20">
           <Loader2 className="h-14 w-14 text-primary animate-spin" />
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Analyzing Fuel...</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Analysing Fuel...</p>
         </div>
       )}
 
       {/* Error banner */}
       {error && (
-        <div className="absolute top-28 left-4 right-4 z-20 bg-destructive/90 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 text-white animate-in slide-in-from-top-2">
+        <div className="absolute top-36 left-4 right-4 z-20 bg-destructive/90 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 text-white animate-in slide-in-from-top-2">
           <AlertCircle size={16} />
           <p className="text-[10px] font-black uppercase italic flex-1">{error}</p>
-          <button onClick={() => fileInputRef.current?.click()} className="text-[9px] font-black uppercase underline whitespace-nowrap">
-            Upload
-          </button>
+          {mode === 'scan' && (
+            <button onClick={() => fileInputRef.current?.click()} className="text-[9px] font-black uppercase underline whitespace-nowrap">
+              Upload
+            </button>
+          )}
         </div>
       )}
 
-      {/* Capture button */}
-      {!preview && cameraActive && !analyzing && (
+      {/* Capture button (scan mode) */}
+      {mode === 'scan' && !preview && cameraActive && !analyzing && (
         <div className="absolute bottom-32 left-0 right-0 z-20 flex justify-center">
           <button
             onClick={capture}
@@ -212,7 +298,7 @@ export default function FoodTracker({
       {/* Results bottom sheet */}
       {result && !analyzing && (
         <div className="absolute bottom-0 left-0 right-0 z-20 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-background/95 backdrop-blur-xl rounded-t-[2.5rem] px-6 pt-4 pb-36 border-t border-white/10 max-h-[62vh] overflow-y-auto space-y-5">
+          <div className="bg-background/95 backdrop-blur-xl rounded-t-[2.5rem] px-6 pt-4 pb-36 border-t border-white/10 max-h-[65vh] overflow-y-auto space-y-5">
             <div className="flex justify-center mb-1">
               <div className="w-10 h-1 bg-white/20 rounded-full" />
             </div>
