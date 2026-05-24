@@ -19,6 +19,7 @@ import PatchNotes from './PatchNotes';
 import FeedbackButton from './FeedbackButton';
 import PostGameDebrief from './PostGameDebrief';
 import TeamPicker from './TeamPicker';
+import MatchIntroSplash from './MatchIntroSplash';
 import { getSavedTeam, saveTeam, type SavedTeam } from '@/lib/fsc-data';
 import type { GameDebrief } from './PostGameDebrief';
 import { CURRENT_VERSION } from '@/lib/patch-notes';
@@ -118,6 +119,15 @@ export default function GamedayFlow() {
 
   // Patch notes
   const [showPatchNotes, setShowPatchNotes] = useState(false);
+
+  // One-time match intro splash
+  const [showMatchIntro, setShowMatchIntro] = useState(() => {
+    try { return !localStorage.getItem('gameday_match_intro_seen'); } catch { return false; }
+  });
+  const dismissMatchIntro = () => {
+    try { localStorage.setItem('gameday_match_intro_seen', '1'); } catch {}
+    setShowMatchIntro(false);
+  };
 
   // Light / dark mode
   const [lightMode, setLightMode] = useState(() => {
@@ -711,6 +721,9 @@ export default function GamedayFlow() {
           onSkip={() => setPendingDebriefFixtureId(null)}
         />
       )}
+
+      {/* One-time match intro splash */}
+      {showMatchIntro && <MatchIntroSplash onDone={dismissMatchIntro} />}
     </div>
   );
 }
