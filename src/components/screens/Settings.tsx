@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronLeft, LogOut, User, Ruler, Clock, Shield, Globe, Search, Loader2, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, LogOut, User, Ruler, Clock, Shield, Globe, Search, Loader2, CheckCircle2, Activity, Bandage, Thermometer, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,12 +40,16 @@ export default function Settings({
   onChangeTeam,
   onUpdateProfile,
   onFixtureScanner,
+  isLightMode,
+  onToggleTheme,
 }: {
   profile: UserProfile,
   onBack: () => void,
   onChangeTeam: () => void,
   onUpdateProfile: (data: Partial<UserProfile>) => void,
   onFixtureScanner: () => void,
+  isLightMode?: boolean,
+  onToggleTheme?: () => void,
 }) {
   const auth = useAuth();
 
@@ -103,6 +107,80 @@ export default function Settings({
 
       <ScrollArea className="flex-1 px-8">
         <div className="space-y-10 pb-20">
+
+          {/* Theme */}
+          {onToggleTheme && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                {isLightMode ? <Sun size={14} className="text-primary" /> : <Moon size={14} className="text-primary" />}
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Appearance</h4>
+              </div>
+              <button
+                onClick={onToggleTheme}
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl bg-white/4 border border-white/8 active:scale-[0.98] transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  {isLightMode ? <Sun size={16} className="text-primary" /> : <Moon size={16} className="text-primary" />}
+                  <div className="text-left">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-white/70">
+                      {isLightMode ? 'Light Mode' : 'Dark Mode'}
+                    </p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      Tap to switch to {isLightMode ? 'dark' : 'light'}
+                    </p>
+                  </div>
+                </div>
+                <div className={cn(
+                  "h-6 w-11 rounded-full relative transition-all",
+                  isLightMode ? "bg-primary" : "bg-white/10"
+                )}>
+                  <div className={cn(
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                    isLightMode ? "left-[22px]" : "left-0.5"
+                  )} />
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Training Status */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+              <Activity size={14} className="text-primary" />
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Training Status</h4>
+            </div>
+            <p className="text-[9px] text-white/25 font-medium uppercase tracking-wider">Affects today's AI plan — resets daily</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'healthy', label: 'Healthy', icon: <Activity size={14} />, active: 'bg-primary/15 border-primary text-primary' },
+                { value: 'injured', label: 'Injured', icon: <Bandage size={14} />, active: 'bg-amber-500/15 border-amber-500 text-amber-400' },
+                { value: 'sick', label: 'Sick', icon: <Thermometer size={14} />, active: 'bg-blue-500/15 border-blue-500 text-blue-400' },
+              ] as const).map(({ value, label, icon, active }) => {
+                const isActive = (profile.trainingStatus ?? 'healthy') === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => onUpdateProfile({ trainingStatus: value })}
+                    className={cn(
+                      "flex flex-col items-center gap-2 py-3 rounded-2xl border text-[9px] font-black uppercase tracking-widest transition-all active:scale-95",
+                      isActive ? active : "bg-white/4 border-white/8 text-white/30 hover:border-white/20"
+                    )}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {(profile.trainingStatus === 'injured' || profile.trainingStatus === 'sick') && (
+              <p className="text-[8px] font-bold uppercase tracking-widest text-amber-400/60 text-center">
+                {profile.trainingStatus === 'injured'
+                  ? 'Training replaced with injury recovery protocol'
+                  : 'Full rest day — no training scheduled'}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-6">
             <div className="flex items-center gap-2 border-b border-white/5 pb-2">
               <User size={14} className="text-primary" />

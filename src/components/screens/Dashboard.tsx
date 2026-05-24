@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2, Plus } from 'lucide-react';
+import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2, Plus, Share2, Trophy, Copy, Swords, Target, Bandage, Thermometer, Lock } from 'lucide-react';
 import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
 import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,8 +16,32 @@ import { cn } from '@/lib/utils';
 import type { UserProfile, ScreenState, DailyStats } from '../GamedayFlow';
 import { loadFSCData, parseMatchDate, formatKickoff, parseTeamName, getSavedTeam, fixturesForTeam, type FSCFixture, type FSCData } from '@/lib/fsc-data';
 import { getSportConfig } from '@/lib/sports-config';
+import { aiLimit, incrementAI, FREE_LIMITS, type AIFeature } from '@/lib/ai-limits';
 
 type Snack = { name: string; benefit: string; steps: string[]; kcal: number; protein: number; carbs: number; fats: number };
+
+const RIVALS = [
+  { name: 'Jordan T.', gender: 'women' },
+  { name: 'Mateo R.',  gender: 'men'   },
+  { name: 'Alex K.',   gender: 'women' },
+  { name: 'Luca M.',   gender: 'men'   },
+  { name: 'Sam P.',    gender: 'men'   },
+  { name: 'Jake H.',   gender: 'men'   },
+  { name: 'Ethan W.',  gender: 'men'   },
+  { name: 'Noah B.',   gender: 'men'   },
+  { name: 'Riley S.',  gender: 'women' },
+  { name: 'Dylan C.',  gender: 'men'   },
+  { name: 'Kai F.',    gender: 'men'   },
+  { name: 'Tyler M.',  gender: 'men'   },
+  { name: 'Mason J.',  gender: 'men'   },
+  { name: 'Logan A.',  gender: 'women' },
+  { name: 'Connor R.', gender: 'men'   },
+  { name: 'Zac D.',    gender: 'men'   },
+  { name: 'Finn H.',   gender: 'men'   },
+  { name: 'Harry B.',  gender: 'men'   },
+  { name: 'Oliver K.', gender: 'men'   },
+  { name: 'James T.',  gender: 'men'   },
+];
 
 function formatTo12h(time24: string) {
   if (!time24) return "";
@@ -283,6 +307,8 @@ export default function Dashboard({
         isWeekend,
         isGameDay,
         sportContext: getSportConfig(profile.sport).aiContext,
+        isInjured: profile.trainingStatus === 'injured',
+        isSick: profile.trainingStatus === 'sick',
       });
 
       const planData = { ...result, uid: profile.uid, date: todayStr, createdAt: new Date().toISOString() };
@@ -362,7 +388,10 @@ export default function Dashboard({
 
   const fetchSnack = async () => {
     if (activeSnack) { setActiveSnack(null); return; }
+    const lim = aiLimit('snack', !!profile.hasAccess);
+    if (!lim.allowed) { setUpgradeFeature('snack'); setShowUpgradeSheet(true); return; }
     setSnackLoading(true);
+    incrementAI('snack');
     try {
       const res = await fetch('/api/snack', {
         method: 'POST',
@@ -384,13 +413,108 @@ export default function Dashboard({
   const nextRank = getNextRank(profile.xp ?? 0);
   const rankProgress = getRankProgress(profile.xp ?? 0);
 
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<AIFeature | null>(null);
+
+  // Rival — persisted in localStorage so users can actually beat them
+  const [rivalState, setRivalState] = useState<{ idx: number; targetXP: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`gameday_rival_state_${profile.uid}`);
+      if (stored) { setRivalState(JSON.parse(stored)); return; }
+      // First time: place rival 0 just ahead of current XP
+      const seed = profile.uid.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 0);
+      const gap = (Math.abs(seed >> 4) % 250) + 75;
+      const init = { idx: 0, targetXP: (profile.xp ?? 0) + gap };
+      localStorage.setItem(`gameday_rival_state_${profile.uid}`, JSON.stringify(init));
+      setRivalState(init);
+    } catch {}
+  }, [profile.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const advanceRival = useCallback(() => {
+    if (!rivalState) return;
+    const newIdx = (rivalState.idx + 1) % RIVALS.length;
+    const seed2 = newIdx * 97 + 13;
+    const gap = (seed2 % 350) + 150;
+    const next = { idx: newIdx, targetXP: (profile.xp ?? 0) + gap };
+    localStorage.setItem(`gameday_rival_state_${profile.uid}`, JSON.stringify(next));
+    setRivalState(next);
+  }, [rivalState, profile.uid, profile.xp]);
+
+  const rival = useMemo(() => {
+    if (!rivalState) return null;
+    const { name, gender } = RIVALS[rivalState.idx % RIVALS.length];
+    const portraitNum = (rivalState.idx * 7 + 13) % 99 + 1;
+    return {
+      name,
+      avatar: `https://randomuser.me/api/portraits/${gender}/${portraitNum}.jpg`,
+      targetXP: rivalState.targetXP,
+    };
+  }, [rivalState]);
+
+  const rivalRank = rival ? getRank(rival.targetXP) : getRank(0);
+  const xpGap = rival ? Math.max(0, rival.targetXP - (profile.xp ?? 0)) : 0;
+  const rivalBeaten = !!rival && (profile.xp ?? 0) >= rival.targetXP;
+
+  // Opposition scout
+  const [scoutData, setScoutData] = useState<{ threats: string; exploit: string; tip: string } | null>(null);
+  const [scoutLoading, setScoutLoading] = useState(false);
+  const [scoutOpen, setScoutOpen] = useState(false);
+
+  const fetchScout = async (opponentName: string, competition?: string) => {
+    if (scoutData) { setScoutOpen(o => !o); return; }
+    const lim = aiLimit('scout', !!profile.hasAccess);
+    if (!lim.allowed) { setUpgradeFeature('scout'); setShowUpgradeSheet(true); return; }
+    setScoutLoading(true);
+    setScoutOpen(true);
+    incrementAI('scout');
+    try {
+      const res = await fetch('/api/scout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opponentName, competition, sport: profile.sport, position: profile.position }),
+      });
+      const data = await res.json();
+      if (!data.error) setScoutData(data);
+    } catch {}
+    finally { setScoutLoading(false); }
+  };
+
+  const SPORT_EMOJI: Record<string, string> = {
+    Soccer: '⚽', Basketball: '🏀', AFL: '🏉', 'Rugby League': '🏉',
+    'Rugby Union': '🏉', Netball: '🏐', Cricket: '🏏', Tennis: '🎾',
+    Swimming: '🏊', Athletics: '🏃', 'American Football': '🏈',
+  };
+  const sportEmoji = SPORT_EMOJI[profile.sport] ?? '⚡';
+
+  const shareText = `${sportEmoji} ${rank.name} · ${profile.xp ?? 0} XP\nTraining as ${profile.position} (${profile.sport}) with Gameday — the AI performance coach for athletes.`;
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Gameday', text: shareText }); } catch {}
+    } else {
+      handleCopy();
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden animate-in fade-in duration-700">
       <div className="px-6 pt-12 pb-4 shrink-0">
         <div className="flex justify-between items-start">
           <div className="space-y-1.5">
             <h3 className="text-xl font-headline font-bold uppercase tracking-tight">Daily Schedule</h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={cn("text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full", rank.bg, rank.color)}>
                 {rank.name}
               </span>
@@ -398,9 +522,26 @@ export default function Dashboard({
               {nextRank && (
                 <span className="text-[8px] text-white/15 font-bold">→ {nextRank.name} at {nextRank.minXP}</span>
               )}
+              {profile.trainingStatus === 'injured' && (
+                <span className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                  <Bandage size={8} /> Injury Mode
+                </span>
+              )}
+              {profile.trainingStatus === 'sick' && (
+                <span className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                  <Thermometer size={8} /> Sick Day
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowShareSheet(true)}
+              title="Share your rank"
+              className="p-2 rounded-full text-white/20 hover:text-white transition-colors"
+            >
+              <Share2 size={16} />
+            </button>
             <button
               onClick={async () => {
                 const granted = await requestNotificationPermission();
@@ -430,10 +571,59 @@ export default function Dashboard({
               {loading ? "Loading..." : plan?.dailyFocusTitle || "Awaiting Protocol"}
             </h2>
           </div>
-          <Button onClick={() => fetchPlan(true)} variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white shrink-0">
+          <Button
+            onClick={() => {
+              const lim = aiLimit('plan-refresh', !!profile.hasAccess);
+              if (!lim.allowed) { setUpgradeFeature('plan-refresh'); setShowUpgradeSheet(true); return; }
+              incrementAI('plan-refresh');
+              fetchPlan(true);
+            }}
+            variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white shrink-0"
+          >
             <RefreshCcw size={14} className={cn(loading && "animate-spin")} />
           </Button>
         </div>
+
+        {/* Rival card */}
+        {rival && (
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all",
+            rivalBeaten
+              ? "bg-emerald-500/5 border-emerald-500/20"
+              : "bg-white/3 border-white/6"
+          )}>
+            <img
+              src={rival.avatar}
+              alt={rival.name}
+              className="h-8 w-8 rounded-lg object-cover shrink-0 bg-white/5"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/25">Your Rival</p>
+              <p className="text-[12px] font-black text-white leading-tight">
+                {rival.name}
+                <span className={cn("ml-2 text-[9px] font-bold", rivalRank.color)}>{rivalRank.name}</span>
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              {rivalBeaten ? (
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400">Beaten! 🏆</span>
+                  <button
+                    onClick={advanceRival}
+                    className="text-[8px] font-black uppercase tracking-widest text-white/35 hover:text-white/70 transition-colors"
+                  >
+                    Next Rival →
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-red-400">{xpGap} XP ahead</p>
+                  <p className="text-[8px] text-white/20 font-bold">{rival.targetXP} total</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Next game */}
         {nextGame && (() => {
@@ -445,27 +635,107 @@ export default function Dashboard({
             ? nextGame.opponentName.split('  ')[0].trim()
             : nextGame.opponentName;
           return (
-            <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-white/8 p-5 flex items-center gap-4 active:scale-[0.98] transition-all">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0">
-                <span className="text-lg font-black text-primary leading-none">{countdown.label}</span>
-                {countdown.sub && <span className="text-[7px] font-bold uppercase tracking-wide text-primary/60 leading-none mt-0.5">{countdown.sub}</span>}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Next Game</p>
-                <p className="text-base font-headline font-black uppercase text-white leading-tight truncate">vs {opponentClub}</p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                    <Calendar size={8} />{dateLabel}
-                  </div>
-                  <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                    <Clock size={8} />{kickoff}
-                  </div>
-                  <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                    <MapPin size={8} />{nextGame.groundLocation}
+            <div className="space-y-0">
+              <button onClick={() => onNavClick('fixtures')} className="w-full rounded-3xl bg-white/5 border border-white/8 p-5 flex items-center gap-4 active:scale-[0.98] transition-all rounded-b-xl">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0">
+                  <span className="text-lg font-black text-primary leading-none">{countdown.label}</span>
+                  {countdown.sub && <span className="text-[7px] font-bold uppercase tracking-wide text-primary/60 leading-none mt-0.5">{countdown.sub}</span>}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-white/30">Next Game</p>
+                  <p className="text-base font-headline font-black uppercase text-white leading-tight truncate">vs {opponentClub}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      <Calendar size={8} />{dateLabel}
+                    </div>
+                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      <Clock size={8} />{kickoff}
+                    </div>
+                    <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      <MapPin size={8} />{nextGame.groundLocation}
+                    </div>
                   </div>
                 </div>
+                <img src={nextGame.opponentLogo} alt="" className="h-10 w-10 rounded-xl object-contain bg-white/5 shrink-0" />
+              </button>
+
+              {/* Scout button */}
+              {(() => {
+                const scoutLim = aiLimit('scout', !!profile.hasAccess);
+                return (
+                  <button
+                    onClick={() => fetchScout(opponentClub, (nextGame as any).leagueTierName)}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-b-3xl bg-white/3 border border-t-0 border-white/8 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 hover:bg-white/5 transition-all active:scale-[0.99]"
+                  >
+                    {scoutLoading ? <Loader2 size={10} className="animate-spin" /> : <Target size={10} />}
+                    {scoutData ? (scoutOpen ? 'Hide Scout Report' : 'Scout Report') : 'Generate Scout Report'}
+                    {!profile.hasAccess && !scoutData && scoutLim.remaining <= 2 && scoutLim.remaining > 0 && (
+                      <span className="opacity-40">({scoutLim.remaining} left)</span>
+                    )}
+                  </button>
+                );
+              })()}
+
+              {/* Scout report panel */}
+              {scoutOpen && (
+                <div className="mt-2 rounded-2xl bg-white/4 border border-white/8 p-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                  {scoutLoading && !scoutData ? (
+                    <div className="flex items-center justify-center gap-2 py-3">
+                      <Loader2 size={14} className="animate-spin text-white/30" />
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-white/30">Analysing {opponentClub}...</span>
+                    </div>
+                  ) : scoutData ? (
+                    <>
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/25">Scout Report — vs {opponentClub}</p>
+                      <div className="space-y-2.5">
+                        <div className="flex gap-2.5">
+                          <span className="text-[9px] shrink-0 mt-0.5">⚠️</span>
+                          <div>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-red-400/70 mb-0.5">Watch Out</p>
+                            <p className="text-[11px] text-white/60 leading-snug">{scoutData.threats}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2.5">
+                          <span className="text-[9px] shrink-0 mt-0.5">💡</span>
+                          <div>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-primary/70 mb-0.5">Exploit</p>
+                            <p className="text-[11px] text-white/60 leading-snug">{scoutData.exploit}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2.5">
+                          <span className="text-[9px] shrink-0 mt-0.5">🎯</span>
+                          <div>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-amber-400/70 mb-0.5">Your Edge ({profile.position})</p>
+                            <p className="text-[11px] text-white/60 leading-snug">{scoutData.tip}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Game-day upgrade nudge for free users */}
+        {!profile.hasAccess && nextGame && (() => {
+          const countdown = daysUntilDate(nextGame.matchDate);
+          if (countdown.label !== 'Today') return null;
+          return (
+            <button
+              onClick={() => onNavClick('paywall')}
+              className="w-full rounded-2xl bg-primary/8 border border-primary/25 p-4 flex items-center gap-3 active:scale-[0.98] transition-all group relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
+              <div className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <Zap size={16} className="text-primary fill-primary" />
               </div>
-              <img src={nextGame.opponentLogo} alt="" className="h-10 w-10 rounded-xl object-contain bg-white/5 shrink-0" />
+              <div className="flex-1 text-left">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-primary/60">Game Day Protocol</p>
+                <p className="text-[13px] font-bold text-white leading-tight">Unlock your pre-match nutrition plan</p>
+              </div>
+              <ChevronRight size={14} className="text-primary/40 group-hover:text-primary transition-colors shrink-0" />
             </button>
           );
         })()}
@@ -488,19 +758,27 @@ export default function Dashboard({
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Timeline</h4>
             <div className="flex items-center gap-3">
-              <button
-                onClick={fetchSnack}
-                disabled={snackLoading}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
-                  activeSnack
-                    ? "bg-amber-400/15 border-amber-400/30 text-amber-300"
-                    : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
-                )}
-              >
-                {snackLoading ? <Loader2 size={10} className="animate-spin" /> : <Apple size={10} />}
-                Snack
-              </button>
+              {(() => {
+                const snackLim = aiLimit('snack', !!profile.hasAccess);
+                return (
+                  <button
+                    onClick={fetchSnack}
+                    disabled={snackLoading}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
+                      activeSnack
+                        ? "bg-amber-400/15 border-amber-400/30 text-amber-300"
+                        : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
+                    )}
+                  >
+                    {snackLoading ? <Loader2 size={10} className="animate-spin" /> : <Apple size={10} />}
+                    Snack
+                    {!profile.hasAccess && !activeSnack && snackLim.remaining <= 2 && snackLim.remaining > 0 && (
+                      <span className="opacity-40">({snackLim.remaining})</span>
+                    )}
+                  </button>
+                );
+              })()}
               <span className="text-[10px] font-bold text-white uppercase tracking-widest">{formatTo12h(currentTime)}</span>
             </div>
           </div>
@@ -552,7 +830,10 @@ export default function Dashboard({
                   </button>
                   <button
                     onClick={async () => {
+                      const lim = aiLimit('snack', !!profile.hasAccess);
+                      if (!lim.allowed) { setUpgradeFeature('snack'); setShowUpgradeSheet(true); return; }
                       setSnackLoading(true);
+                      incrementAI('snack');
                       try {
                         const res = await fetch('/api/snack', {
                           method: 'POST',
@@ -708,6 +989,123 @@ export default function Dashboard({
           <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
         </button>
       </div>
+
+      {/* Upgrade sheet overlay */}
+      {showUpgradeSheet && upgradeFeature && (
+        <div
+          className="absolute inset-0 z-50 flex items-end justify-center bg-black/65 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowUpgradeSheet(false)}
+        >
+          <div
+            className="w-full bg-[#181818] border-t border-white/10 rounded-t-3xl px-6 pt-6 pb-10 space-y-5 animate-in slide-in-from-bottom-4 duration-350"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center">
+              <div className="h-12 w-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Lock size={20} className="text-primary" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-primary">Free Limit Hit</p>
+              <h3 className="text-xl font-headline font-black uppercase leading-tight">
+                {upgradeFeature === 'snack' ? 'Snack Limit Reached' :
+                 upgradeFeature === 'scout' ? 'Scout Limit Reached' :
+                 upgradeFeature === 'plan-refresh' ? 'Refresh Limit Reached' :
+                 'Limit Reached'}
+              </h3>
+              <p className="text-[11px] text-white/40 font-medium leading-relaxed">
+                {upgradeFeature === 'snack'
+                  ? `You've used all ${FREE_LIMITS.snack.max} free snack suggestions for today.`
+                  : upgradeFeature === 'scout'
+                  ? `You've used all ${FREE_LIMITS.scout.max} free scout reports.`
+                  : `You've used all ${FREE_LIMITS['plan-refresh'].max} free plan refreshes for today.`}
+                {' '}Upgrade for unlimited access.
+              </p>
+            </div>
+            <button
+              onClick={() => { setShowUpgradeSheet(false); onNavClick('paywall'); }}
+              className="w-full h-14 rounded-2xl bg-primary text-primary-foreground text-sm font-black uppercase italic neon-glow active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <Zap size={16} className="fill-current" />
+              Unlock Pro — Unlimited Access
+            </button>
+            <button
+              onClick={() => setShowUpgradeSheet(false)}
+              className="w-full text-center text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-white/40 transition-colors"
+            >
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Share sheet overlay */}
+      {showShareSheet && (
+        <div
+          className="absolute inset-0 z-50 flex items-end justify-center bg-black/65 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowShareSheet(false)}
+        >
+          <div
+            className="w-full bg-[#181818] border-t border-white/10 rounded-t-3xl px-6 pt-6 pb-10 space-y-5 animate-in slide-in-from-bottom-4 duration-350"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Card preview */}
+            <div className="rounded-2xl bg-white/5 border border-white/8 p-5 space-y-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center gap-3">
+                <div className={cn("h-11 w-11 rounded-2xl flex items-center justify-center", rank.bg)}>
+                  <Trophy size={20} className={rank.color} />
+                </div>
+                <div>
+                  <p className={cn("text-lg font-black uppercase tracking-tight leading-none", rank.color)}>{rank.name}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 mt-0.5">{profile.xp ?? 0} XP · {profile.sport}</p>
+                </div>
+                <div className="ml-auto text-2xl">{sportEmoji}</div>
+              </div>
+              {nextRank && (
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Progress to {nextRank.name}</span>
+                    <span className="text-[8px] font-black text-white/20">{rankProgress}%</span>
+                  </div>
+                  <div className="h-1 bg-white/8 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${rankProgress}%` }} />
+                  </div>
+                </div>
+              )}
+              <p className="text-[10px] text-white/30 font-medium leading-relaxed border-t border-white/5 pt-3">
+                Training smarter every day · Powered by Gameday
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handleShare}
+                className="h-12 rounded-2xl bg-primary text-black text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 neon-glow active:scale-95 transition-all"
+              >
+                <Share2 size={13} /> Share
+              </button>
+              <button
+                onClick={handleCopy}
+                className="h-12 rounded-2xl bg-white/8 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                {copied
+                  ? <><CheckCircle2 size={13} className="text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
+                  : <><Copy size={13} /> Copy Text</>
+                }
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowShareSheet(false)}
+              className="w-full text-center text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-white/40 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

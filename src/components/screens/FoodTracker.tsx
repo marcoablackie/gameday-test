@@ -2,11 +2,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Camera, Loader2, CheckCircle2, Home, Dumbbell, BarChart2, AlertCircle, Plus, Zap, Scan, RefreshCw, PenLine, Search } from 'lucide-react';
+import { ChevronLeft, Camera, Loader2, CheckCircle2, Home, Dumbbell, BarChart2, AlertCircle, Plus, Zap, Scan, RefreshCw, PenLine, Search, Lock } from 'lucide-react';
 import type { AnalyzeFoodOutput } from '@/ai/flows/analyze-food-photo';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import type { ScreenState, DailyStats } from '../GamedayFlow';
+import { aiLimit, incrementAI, FREE_LIMITS } from '@/lib/ai-limits';
 
 type Mode = 'scan' | 'type';
 
@@ -17,11 +18,13 @@ export default function FoodTracker({
   onNavClick,
   onLogMeal,
   uid,
+  hasAccess,
 }: {
   onBack: () => void,
   onNavClick: (screen: ScreenState) => void,
   onLogMeal: (stats: DailyStats, foodName: string) => void,
   uid?: string,
+  hasAccess?: boolean,
 }) {
   const [mode, setMode] = useState<Mode>('scan');
   const [analyzing, setAnalyzing] = useState(false);
@@ -30,6 +33,7 @@ export default function FoodTracker({
   const [error, setError] = useState<string | null>(null);
   const [logged, setLogged] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [limitHit, setLimitHit] = useState(false);
 
   // Manual text mode
   const [foodText, setFoodText] = useState('');
@@ -99,12 +103,15 @@ export default function FoodTracker({
   };
 
   const processPhoto = async (base64: string) => {
+    const lim = aiLimit('food-scan', !!hasAccess);
+    if (!lim.allowed) { setLimitHit(true); return; }
     setAnalyzing(true);
     setPreview(base64);
     setResult(null);
     setError(null);
     setLogged(false);
     stopCamera();
+    incrementAI('food-scan');
     try {
       const res = await fetch('/api/analyze-food', {
         method: 'POST',
@@ -123,10 +130,13 @@ export default function FoodTracker({
 
   const lookupFood = async () => {
     if (!foodText.trim()) return;
+    const lim = aiLimit('food-scan', !!hasAccess);
+    if (!lim.allowed) { setLimitHit(true); return; }
     setAnalyzing(true);
     setResult(null);
     setError(null);
     setLogged(false);
+    incrementAI('food-scan');
     try {
       const res = await fetch('/api/lookup-food', {
         method: 'POST',
@@ -173,6 +183,7 @@ export default function FoodTracker({
     setPreview(null);
     setError(null);
     setLogged(false);
+    setLimitHit(false);
     setFoodText('');
     if (mode === 'scan') startCamera();
   };
@@ -189,6 +200,7 @@ export default function FoodTracker({
     setPreview(null);
     setError(null);
     setLogged(false);
+    setLimitHit(false);
     setFoodText('');
   };
 
@@ -309,6 +321,32 @@ export default function FoodTracker({
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-20">
           <Loader2 className="h-14 w-14 text-primary animate-spin" />
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Analysing Fuel...</p>
+        </div>
+      )}
+
+      {/* Limit hit overlay */}
+      {limitHit && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-5 z-20 px-8">
+          <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Lock size={24} className="text-primary" />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-primary">Daily Limit Reached</p>
+            <h3 className="text-xl font-headline font-black uppercase leading-tight">Food Scan Limit Hit</h3>
+            <p className="text-[11px] text-white/40 font-medium leading-relaxed">
+              You've used all {FREE_LIMITS['food-scan'].max} free food scans for today. Upgrade for unlimited scanning.
+            </p>
+          </div>
+          <button
+            onClick={() => onNavClick('paywall')}
+            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground text-sm font-black uppercase italic neon-glow active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            <Zap size={16} className="fill-current" />
+            Unlock Pro
+          </button>
+          <button onClick={() => setLimitHit(false)} className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-white/40 transition-colors">
+            Go Back
+          </button>
         </div>
       )}
 

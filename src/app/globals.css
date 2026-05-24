@@ -36,6 +36,17 @@
   }
 }
 
+/* Light mode — invert(1) flips black↔white; hue-rotate(180deg) cancels out the hue shift
+   so accent colours (emerald, amber, red, blue) stay visually correct */
+.light-mode {
+  filter: invert(1) hue-rotate(180deg);
+}
+/* Re-invert images and video so they show with original colours */
+.light-mode img,
+.light-mode video {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 .neon-glow {
   box-shadow: 0 0 20px -5px rgba(255, 255, 255, 0.4);
 }

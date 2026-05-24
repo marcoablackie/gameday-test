@@ -24,6 +24,8 @@ const GeneratePersonalizedTrainingPlanInputSchema = z.object({
   isWeekend: z.boolean().optional().describe('True if today is Saturday or Sunday'),
   isGameDay: z.boolean().optional().describe('True if the athlete has a match scheduled for today'),
   sportContext: z.string().optional().describe('Sport-specific coaching context: game structure, physical demands, training notes'),
+  isInjured: z.boolean().optional().describe('Athlete is carrying an injury — replace all training with gentle recovery only'),
+  isSick: z.boolean().optional().describe('Athlete is sick — complete rest day, zero training'),
 });
 
 const GeneratePersonalizedTrainingPlanOutputSchema = z.object({
@@ -63,6 +65,8 @@ Today: {{todayDayOfWeek}}{{/if}}
 {{#if trainingTime}}Preferred training time: {{{trainingTime}}}{{/if}}
 {{#if isWeekend}}TODAY IS A WEEKEND (Sat/Sun) — NO school.{{/if}}
 {{#if isGameDay}}TODAY IS A MATCH DAY.{{/if}}
+{{#if isInjured}}⚠️ ATHLETE IS CARRYING AN INJURY.{{/if}}
+{{#if isSick}}🤒 ATHLETE IS SICK TODAY.{{/if}}
 
 RULES:
 1. SCHOOL LOCKOUT (WEEKDAYS ONLY): School is ONLY on Mon–Fri. {{#if isWeekend}}Today is a weekend — do NOT include any school block at all.{{else}}Include exactly one "School Attendance" block between {{{schoolStartTime}}} and {{{schoolEndTime}}}. No training or nutrition during that window.{{/if}}
@@ -73,6 +77,8 @@ RULES:
 6. Use 24-hour format (HH:mm) for the "time" field internally for consistency.
 7. TRAINING vs REST: If today ({{todayDayOfWeek}}) is NOT in the training days list, this is a REST DAY. On rest days, replace all training blocks with "Active Recovery" (light stretching, foam rolling, or an easy walk). Do NOT schedule intense drills on rest days. If today IS a training day, schedule the main drill block near the preferred training time. NOTE: Rule 8 (Game Day) overrides this rule — a match day always takes priority over rest day classification.
 8. GAME DAY NUTRITION: {{#if isGameDay}}TODAY IS A MATCH DAY — this overrides all rest-day rules. Schedule a pre-match breakfast block in the morning (around 07:00–08:00) with the intel: light, easy-to-digest carb-rich food only — e.g. white toast with honey, banana and water, or plain oats. NO heavy food, NO eggs, NO dairy, NO high-fat or high-fibre items that could cause stomach issues. The meal should be done 2–3 hours before kickoff. Also include a post-match recovery nutrition block. Skip intense training drills today — the match is the session.{{else}}Standard nutrition rules apply.{{/if}}
+9. INJURY MODE: {{#if isInjured}}ATHLETE IS INJURED — this overrides rules 7 and 8. Replace EVERY training block with gentle Active Recovery (foam rolling, resistance band mobility, light stretching only). NO running, NO jumping, NO impact of any kind. Add one "Injury Nutrition" block: anti-inflammatory foods — turmeric, berries, lean protein, omega-3s. Title the day "Recovery Day — Injury Protocol".{{else}}No injury restrictions.{{/if}}
+10. SICK MODE: {{#if isSick}}ATHLETE IS SICK — this overrides ALL other rules. This is a COMPLETE REST DAY. Include ONLY: morning hydration block, two light easy-to-digest nutrition blocks (dry toast, clear soup, electrolytes), and an early sleep block. ZERO physical training whatsoever. Title the day "Rest Day — Recovery Protocol".{{else}}No illness restrictions.{{/if}}
 `,
 });
 

@@ -66,6 +66,7 @@ export type UserProfile = {
   trainingDays?: string[];
   trainingTime?: string;
   debriefedFixtureIds?: string[];
+  trainingStatus?: 'healthy' | 'injured' | 'sick';
 };
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures' | 'fixture_scanner';
@@ -117,6 +118,16 @@ export default function GamedayFlow() {
 
   // Patch notes
   const [showPatchNotes, setShowPatchNotes] = useState(false);
+
+  // Light / dark mode
+  const [lightMode, setLightMode] = useState(() => {
+    try { return localStorage.getItem('gameday_theme') === 'light'; } catch { return false; }
+  });
+  const toggleTheme = () => setLightMode(prev => {
+    const next = !prev;
+    try { localStorage.setItem('gameday_theme', next ? 'light' : 'dark'); } catch {}
+    return next;
+  });
 
   // Team picker — shown after paywall for new users, or once for existing users without a team
   const [showTeamPicker, setShowTeamPicker] = useState(false);
@@ -503,7 +514,8 @@ export default function GamedayFlow() {
     setDocViaRest(userRef, newProfile).catch(() =>
       setDoc(userRef, newProfile, { merge: true }).catch(console.error)
     );
-    // Navigate immediately — don't wait for onSnapshot
+    // Show team picker first so users invest before hitting the paywall
+    setShowTeamPicker(true);
     setCurrentScreen('paywall');
   };
 
@@ -519,7 +531,7 @@ export default function GamedayFlow() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
+    <div className={`flex-1 flex flex-col h-full overflow-hidden bg-background${lightMode ? ' light-mode' : ''}`}>
       {currentScreen === 'welcome' && <Welcome onNext={() => setCurrentScreen('auth')} />}
       {currentScreen === 'auth' && !effectiveUser && <AuthScreen />}
       {currentScreen === 'auth' && effectiveUser && (
@@ -535,6 +547,8 @@ export default function GamedayFlow() {
 
       {currentScreen === 'paywall' && (
         <Paywall
+          sport={effectiveProfile?.sport}
+          position={effectiveProfile?.position}
           onComplete={() => {
             updateProfile({ hasAccess: true });
             if (effectiveProfile && effectiveUser) {
@@ -542,8 +556,6 @@ export default function GamedayFlow() {
               setCachedProfile(updated);
               try { localStorage.setItem(`gameday_profile_${effectiveUser.uid}`, JSON.stringify(updated)); } catch {}
             }
-            // Show team picker for new users before landing on dashboard
-            setShowTeamPicker(true);
             setCurrentScreen('dashboard');
           }}
           onDismiss={() => setCurrentScreen('dashboard')}
@@ -631,10 +643,12 @@ export default function GamedayFlow() {
           onChangeTeam={() => setShowTeamPicker(true)}
           onUpdateProfile={updateProfile}
           onFixtureScanner={() => setCurrentScreen('fixture_scanner')}
+          isLightMode={lightMode}
+          onToggleTheme={toggleTheme}
         />
       )}
 
-      {currentScreen === 'food_tracker' && <FoodTracker onBack={() => setCurrentScreen('dashboard')} onNavClick={setCurrentScreen} onLogMeal={logMealStats} uid={effectiveProfile?.uid} />}
+      {currentScreen === 'food_tracker' && <FoodTracker onBack={() => setCurrentScreen('dashboard')} onNavClick={setCurrentScreen} onLogMeal={logMealStats} uid={effectiveProfile?.uid} hasAccess={effectiveProfile?.hasAccess} />}
 
       {currentScreen === 'quests' && effectiveProfile && (
         <Quests
