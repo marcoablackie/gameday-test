@@ -3,12 +3,30 @@
 type ScheduleItem = { time: string; type: string; activity: string };
 
 let _timers: ReturnType<typeof setTimeout>[] = [];
+let _swReg: ServiceWorkerRegistration | null = null;
+
+export async function registerServiceWorker(): Promise<void> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    _swReg = await navigator.serviceWorker.register('/sw.js');
+  } catch {}
+}
+
+async function getSwReg(): Promise<ServiceWorkerRegistration | null> {
+  if (_swReg) return _swReg;
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
+  try {
+    _swReg = await navigator.serviceWorker.ready;
+    return _swReg;
+  } catch { return null; }
+}
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (typeof window === 'undefined' || !('Notification' in window)) return false;
   if (Notification.permission === 'granted') return true;
   if (Notification.permission === 'denied') return false;
   const result = await Notification.requestPermission();
+  if (result === 'granted') await registerServiceWorker();
   return result === 'granted';
 }
 
@@ -27,12 +45,24 @@ function minutesOfDay(hhmm: string): number {
   return h * 60 + m;
 }
 
+async function showNotif(title: string, body: string) {
+  const reg = await getSwReg();
+  if (reg) {
+    reg.showNotification(title, { body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });
+  } else if (typeof Notification !== 'undefined') {
+    new Notification(title, { body, icon: '/icons/icon-192.png' });
+  }
+}
+
 function scheduleNotif(delayMs: number, title: string, body: string) {
   if (delayMs <= 0) return;
-  const timer = setTimeout(() => {
-    new Notification(title, { body, icon: '/favicon.ico', silent: false });
-  }, delayMs);
+  const timer = setTimeout(() => showNotif(title, body), delayMs);
   _timers.push(timer);
+}
+
+export async function notifyPlanReady(sport: string): Promise<void> {
+  if (!isNotificationPermitted()) return;
+  await showNotif('Gameday Pro', `Your ${sport} plan for today is loaded. Time to lock in. ⚡`);
 }
 
 export function scheduleDayNotifications(
@@ -47,7 +77,7 @@ export function scheduleDayNotifications(
   const schoolStartMins = minutesOfDay(schoolStart);
   const schoolEndMins = minutesOfDay(schoolEnd);
 
-  // Morning briefing at 7:00am (skip if it's already past)
+  // 7am morning briefing
   const briefing = new Date();
   briefing.setHours(7, 0, 0, 0);
   if (briefing > now) {
@@ -64,29 +94,17 @@ export function scheduleDayNotifications(
     const blockTime = new Date();
     blockTime.setHours(h, m, 0, 0);
 
-    const label = item.type === 'nutrition'
-      ? `🥗 ${item.activity}`
-      : `⚡ ${item.activity}`;
+    const label = item.type === 'nutrition' ? `🥗 ${item.activity}` : `⚡ ${item.activity}`;
 
-    // 15-minute warning
     const warn15 = new Date(blockTime.getTime() - 15 * 60 * 1000);
     const warn15Mins = warn15.getHours() * 60 + warn15.getMinutes();
     const duringSchool = warn15Mins >= schoolStartMins && warn15Mins < schoolEndMins;
     if (warn15 > now && !duringSchool) {
-      scheduleNotif(
-        warn15.getTime() - now.getTime(),
-        'Gameday Pro — 15 min',
-        `${label} starts in 15 minutes`,
-      );
+      scheduleNotif(warn15.getTime() - now.getTime(), 'Gameday Pro — 15 min', `${label} starts in 15 minutes`);
     }
 
-    // At-time reminder
     if (blockTime > now) {
-      scheduleNotif(
-        blockTime.getTime() - now.getTime(),
-        'Gameday Pro — Now',
-        `${label} — time to go`,
-      );
+      scheduleNotif(blockTime.getTime() - now.getTime(), 'Gameday Pro — Now', `${label} — time to go`);
     }
   }
 }

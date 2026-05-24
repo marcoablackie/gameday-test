@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
 import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2, Plus, Share2, Trophy, Copy, Swords, Target, Bandage, Thermometer, Lock } from 'lucide-react';
 import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
-import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications } from '@/lib/notification-service';
+import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications, registerServiceWorker, notifyPlanReady } from '@/lib/notification-service';
+import { touchStreak } from '@/lib/streak';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
@@ -316,6 +317,7 @@ export default function Dashboard({
 
       try { localStorage.setItem(planCacheKey, JSON.stringify(result)); } catch {}
       setPlan(result);
+      if (!forceRefresh) notifyPlanReady(profile.sport);
     } catch (err) {
       console.error("Fetch plan failed:", err);
       setError("Sync failed. Please check your connection and try again.");
@@ -330,6 +332,14 @@ export default function Dashboard({
 
   const [notifEnabled, setNotifEnabled] = useState(false);
   useEffect(() => { setNotifEnabled(isNotificationPermitted()); }, []);
+
+  // Streak
+  const [streak, setStreak] = useState(0);
+  useEffect(() => {
+    const s = touchStreak(profile.uid);
+    setStreak(s.count);
+    registerServiceWorker();
+  }, [profile.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!plan || !notifEnabled) return;
@@ -519,6 +529,9 @@ export default function Dashboard({
                 {rank.name}
               </span>
               <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">{profile.xp ?? 0} XP</span>
+              {streak > 0 && (
+                <span className="text-[8px] font-black uppercase tracking-widest text-orange-400">🔥 {streak}d</span>
+              )}
               {nextRank && (
                 <span className="text-[8px] text-white/15 font-bold">→ {nextRank.name} at {nextRank.minXP}</span>
               )}
