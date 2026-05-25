@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Camera, Loader2, CheckCircle2, Home, Dumbbell, BarChart2, AlertCircle, Plus, Zap, Scan, RefreshCw, PenLine, Search, Lock } from 'lucide-react';
+import { ChevronLeft, Camera, Loader2, CheckCircle2, AlertCircle, Plus, Zap, Scan, RefreshCw, PenLine, Search, Lock } from 'lucide-react';
+import NavBar from '@/components/NavBar';
 import type { AnalyzeFoodOutput } from '@/ai/flows/analyze-food-photo';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -446,25 +447,7 @@ export default function FoodTracker({
       <canvas ref={canvasRef} className="hidden" />
       <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
 
-      {/* Bottom nav */}
-      <div className="absolute bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">
-        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Home size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Daily</span>
-        </button>
-        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Dumbbell size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Drills</span>
-        </button>
-        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Zap size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Bonus</span>
-        </button>
-        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white transition-colors">
-          <div className="h-1 w-8 bg-primary rounded-full mb-1" />
-          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
-        </button>
-        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
-        </button>
-      </div>
+      <NavBar active="food_tracker" onNavClick={onNavClick} />
     </div>
   );
 }

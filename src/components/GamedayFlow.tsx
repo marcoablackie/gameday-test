@@ -67,6 +67,9 @@ export type UserProfile = {
   trainingTime?: string;
   debriefedFixtureIds?: string[];
   trainingStatus?: 'healthy' | 'injured' | 'sick';
+  displayName?: string;
+  fullName?: string;
+  theme?: 'dark' | 'light' | 'blossom' | 'royal' | 'mono';
 };
 
 export type ScreenState = 'welcome' | 'auth' | 'onboarding' | 'paywall' | 'dashboard' | 'drill' | 'meal' | 'drills_library' | 'stats' | 'food_tracker' | 'quests' | 'settings' | 'fixtures' | 'fixture_scanner';
@@ -119,15 +122,16 @@ export default function GamedayFlow() {
   // Patch notes
   const [showPatchNotes, setShowPatchNotes] = useState(false);
 
-  // Light / dark mode
-  const [lightMode, setLightMode] = useState(() => {
-    try { return localStorage.getItem('gameday_theme') === 'light'; } catch { return false; }
+  // Theme
+  type AppTheme = 'dark' | 'light' | 'blossom' | 'royal' | 'mono';
+  const [theme, setThemeState] = useState<AppTheme>(() => {
+    try { return (localStorage.getItem('gameday_theme') || 'dark') as AppTheme; } catch { return 'dark'; }
   });
-  const toggleTheme = () => setLightMode(prev => {
-    const next = !prev;
-    try { localStorage.setItem('gameday_theme', next ? 'light' : 'dark'); } catch {}
-    return next;
-  });
+  const setTheme = (t: AppTheme) => {
+    try { localStorage.setItem('gameday_theme', t); } catch {}
+    setThemeState(t);
+  };
+  const themeClass = theme === 'light' ? 'light-mode' : theme !== 'dark' ? `theme-${theme}` : '';
 
   // Team picker — shown after paywall for new users, or once for existing users without a team
   const [showTeamPicker, setShowTeamPicker] = useState(false);
@@ -531,7 +535,7 @@ export default function GamedayFlow() {
   }
 
   return (
-    <div className={`flex-1 flex flex-col h-full overflow-hidden bg-background${lightMode ? ' light-mode' : ''}`}>
+    <div className={`flex-1 flex flex-col h-full overflow-hidden bg-background${themeClass ? ` ${themeClass}` : ''}`}>
       {currentScreen === 'welcome' && <Welcome onNext={() => setCurrentScreen('auth')} />}
       {currentScreen === 'auth' && !effectiveUser && <AuthScreen />}
       {currentScreen === 'auth' && effectiveUser && (
@@ -643,8 +647,9 @@ export default function GamedayFlow() {
           onChangeTeam={() => setShowTeamPicker(true)}
           onUpdateProfile={updateProfile}
           onFixtureScanner={() => setCurrentScreen('fixture_scanner')}
-          isLightMode={lightMode}
-          onToggleTheme={toggleTheme}
+          onNavClick={setCurrentScreen}
+          theme={theme}
+          onSetTheme={setTheme}
         />
       )}
 

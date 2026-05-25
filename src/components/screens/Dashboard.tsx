@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { generatePersonalizedTrainingPlan, type GeneratePersonalizedTrainingPlanOutput } from '@/ai/flows/generate-personalized-training-plan';
-import { Home, Dumbbell, Utensils, BarChart2, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2, Plus, Share2, Trophy, Copy, Swords, Target, Bandage, Thermometer, Lock } from 'lucide-react';
+import { Utensils, Play, ChevronRight, Clock, Moon, Flame, Camera, RefreshCcw, AlertCircle, GraduationCap, Calendar, MapPin, CheckCircle2, XCircle, Zap, Bell, BellOff, Check, X, Apple, Shuffle, Loader2, Plus, Share2, Trophy, Copy, Swords, Target, Bandage, Thermometer, Lock } from 'lucide-react';
+import NavBar from '@/components/NavBar';
 import { getRank, getRankProgress, getNextRank } from '@/lib/rank';
 import { scheduleDayNotifications, requestNotificationPermission, isNotificationPermitted, clearScheduledNotifications, registerServiceWorker, notifyPlanReady } from '@/lib/notification-service';
 import { touchStreak } from '@/lib/streak';
@@ -454,6 +455,38 @@ export default function Dashboard({
     setRivalState(next);
   }, [rivalState, profile.uid, profile.xp]);
 
+  // Daily challenge — 1 per day, rotates from a curated list
+  const CHALLENGES = [
+    { id: 'c1',  title: '100 Reps',           desc: 'Any exercise — push-ups, squats, jumps. Break it up however you want.', xp: 150, cat: 'Physical'  },
+    { id: 'c2',  title: 'Cold Shower',        desc: 'End your shower with 60 seconds of cold water. Build mental toughness.', xp: 100, cat: 'Mindset'  },
+    { id: 'c3',  title: 'Sprint Series',       desc: '5 all-out 30m sprints with 90s rest between. Max effort every rep.',     xp: 150, cat: 'Physical'  },
+    { id: 'c4',  title: 'Visualisation',       desc: '10 mins eyes closed — see every move in your next game in detail.',      xp: 100, cat: 'Mindset'  },
+    { id: 'c5',  title: 'No Junk Day',         desc: 'Zero processed food or soda today. Whole foods only.',                   xp: 150, cat: 'Nutrition' },
+    { id: 'c6',  title: 'Hydration Protocol',  desc: 'Drink 3 litres of water today. Set reminders every 2 hours.',           xp: 75,  cat: 'Nutrition' },
+    { id: 'c7',  title: 'Full Stretch',        desc: '15 mins full-body — hips, hammies, shoulders, calves.',                  xp: 75,  cat: 'Recovery'  },
+    { id: 'c8',  title: 'Watch Film',          desc: 'Watch 20 mins of a pro who plays your position. Take 3 notes.',          xp: 100, cat: 'Mindset'  },
+    { id: 'c9',  title: 'Lights Out by 10PM',  desc: 'In bed with eyes closed by 10PM. Sleep is the #1 performance drug.',    xp: 100, cat: 'Recovery'  },
+    { id: 'c10', title: 'Extra 15 Minutes',    desc: 'Add 15 mins of focused skill work — dribbling, shooting, footwork.',    xp: 100, cat: 'Physical'  },
+    { id: 'c11', title: 'Protein Target',      desc: 'Hit your daily protein goal. Track every meal, within 10g of target.',  xp: 100, cat: 'Nutrition' },
+    { id: 'c12', title: 'Journaling',          desc: '5 mins: what went well, what to fix, tomorrow\'s #1 goal.',              xp: 75,  cat: 'Mindset'  },
+    { id: 'c13', title: 'Foam Roll Session',   desc: '10 mins — quads, IT band, calves, upper back. Hold 45s each spot.',     xp: 75,  cat: 'Recovery'  },
+    { id: 'c14', title: 'Jump Training',        desc: '3 sets × 10 max-height jumps. Triple extension — ankles, knees, hips.', xp: 100, cat: 'Physical'  },
+  ];
+  const todayChallengeIdx = useMemo(() => {
+    const d = new Date();
+    const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000);
+    return dayOfYear % CHALLENGES.length;
+  }, []);
+  const todayChallenge = CHALLENGES[todayChallengeIdx];
+  const challengeKey = `gameday_challenge_done_${profile.uid}_${new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })}`;
+  const [challengeDone, setChallengeDone] = useState(() => {
+    try { return !!localStorage.getItem(challengeKey); } catch { return false; }
+  });
+  const acceptChallenge = () => {
+    try { localStorage.setItem(challengeKey, '1'); } catch {}
+    setChallengeDone(true);
+  };
+
   const rival = useMemo(() => {
     if (!rivalState) return null;
     const { name, gender } = RIVALS[rivalState.idx % RIVALS.length];
@@ -637,6 +670,39 @@ export default function Dashboard({
             </div>
           </div>
         )}
+
+        {/* Daily Challenge */}
+        <div className={cn(
+          "px-4 py-4 rounded-2xl border transition-all",
+          challengeDone ? "bg-emerald-500/5 border-emerald-500/20" : "bg-white/3 border-white/6"
+        )}>
+          <div className="flex items-start gap-3">
+            <div className={cn(
+              "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
+              challengeDone ? "bg-emerald-500/15" : "bg-primary/10"
+            )}>
+              {challengeDone ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Zap size={16} className="text-primary" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/25 mb-0.5">Daily Challenge</p>
+              <p className={cn("text-[12px] font-black uppercase tracking-tight", challengeDone ? "text-emerald-400" : "text-white")}>
+                {todayChallenge.title}
+              </p>
+              <p className="text-[9px] text-white/40 font-medium mt-0.5 leading-snug">{todayChallenge.desc}</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span className="text-[8px] font-black uppercase tracking-widest text-primary">+{todayChallenge.xp} XP</span>
+              {!challengeDone && (
+                <button
+                  onClick={acceptChallenge}
+                  className="mt-1.5 block text-[7px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-primary text-primary-foreground active:scale-95 transition-all"
+                >
+                  Accept
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Next game */}
         {nextGame && (() => {
@@ -984,24 +1050,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div className="sticky bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">
-        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-2 text-white">
-          <div className="h-1 w-8 bg-primary rounded-full mb-1" />
-          <Home size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Daily</span>
-        </button>
-        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Dumbbell size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Drills</span>
-        </button>
-        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Zap size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Bonus</span>
-        </button>
-        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
-        </button>
-        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
-        </button>
-      </div>
+      <NavBar active="dashboard" onNavClick={onNavClick} position="sticky" />
 
       {/* Upgrade sheet overlay */}
       {showUpgradeSheet && upgradeFeature && (

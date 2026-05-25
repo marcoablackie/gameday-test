@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Home, Dumbbell, BarChart2, ChevronLeft, Search, Play, Camera, Zap, Shuffle } from 'lucide-react';
+import { ChevronLeft, Search, Play, Shuffle, Dumbbell, Zap, Target, Lightbulb } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { ScreenState } from '../GamedayFlow';
 import { getDailyDrills, getSportConfig, type DrillTemplate } from '@/lib/sports-config';
 import { cn } from '@/lib/utils';
+import NavBar from '@/components/NavBar';
 
 const CATEGORIES = ['All', 'Position Specific', 'Conditioning', 'IQ & Strategy', 'Strength', 'Skills'] as const;
 
@@ -111,6 +112,12 @@ export default function DrillsLibrary({
                 <p className="text-xs font-black uppercase italic tracking-wider group-hover:text-primary transition-colors truncate">{drill.title}</p>
                 <p className="text-[8px] text-white/40 uppercase font-black tracking-[0.2em]">{drill.category} • {drill.duration}</p>
               </div>
+              <div className="shrink-0 text-white/25">
+                {drill.category === 'Strength' && <Dumbbell size={14} />}
+                {(drill.category === 'Skills' || drill.category === 'Position Specific') && <Target size={14} />}
+                {drill.category === 'Conditioning' && <Zap size={14} />}
+                {drill.category === 'IQ & Strategy' && <Lightbulb size={14} />}
+              </div>
             </div>
           ))}
           {filtered.length === 0 && (
@@ -119,24 +126,7 @@ export default function DrillsLibrary({
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">
-        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Home size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Daily</span>
-        </button>
-        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-2 text-white transition-colors">
-          <div className="h-1 w-8 bg-primary rounded-full mb-1" />
-          <Dumbbell size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Drills</span>
-        </button>
-        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Zap size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Bonus</span>
-        </button>
-        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
-        </button>
-        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
-        </button>
-      </div>
+      <NavBar active="drills_library" onNavClick={onNavClick} />
     </div>
   );
 }

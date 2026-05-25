@@ -47,6 +47,13 @@
   filter: invert(1) hue-rotate(180deg);
 }
 
+/* Theme: Blossom — soft pink primary */
+.theme-blossom { --primary: 322 80% 69%; --primary-foreground: 0 0% 0%; }
+/* Theme: Royal — gold primary */
+.theme-royal   { --primary: 43 96% 56%;  --primary-foreground: 0 0% 0%; }
+/* Theme: Mono — grey primary */
+.theme-mono    { --primary: 215 20% 65%; --primary-foreground: 0 0% 0%; }
+
 .neon-glow {
   box-shadow: 0 0 20px -5px rgba(255, 255, 255, 0.4);
 }

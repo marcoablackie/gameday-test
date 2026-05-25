@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { Home, Dumbbell, BarChart2, ChevronLeft, Zap, Camera, Trophy, Flame, Ruler, Droplets } from 'lucide-react';
+import { ChevronLeft, Trophy, Flame, Ruler, Droplets } from 'lucide-react';
+import NavBar from '@/components/NavBar';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -324,24 +325,7 @@ export default function Stats({
 
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">
-        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Home size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Daily</span>
-        </button>
-        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Dumbbell size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Drills</span>
-        </button>
-        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Zap size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Bonus</span>
-        </button>
-        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
-        </button>
-        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white transition-colors">
-          <div className="h-1 w-8 bg-primary rounded-full mb-1" />
-          <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
-        </button>
-      </div>
+      <NavBar active="stats" onNavClick={onNavClick} />
     </div>
   );
 }

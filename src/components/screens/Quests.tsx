@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Home, Dumbbell, BarChart2, Camera, ChevronLeft, Zap, CheckCircle2, Brain, Flame, Apple, Moon, BookOpen, Users, Target, Wind } from 'lucide-react';
+import { ChevronLeft, Zap, CheckCircle2, Brain, Flame, Apple, Moon, BookOpen, Users, Target, Wind } from 'lucide-react';
+import NavBar from '@/components/NavBar';
 import { cn } from '@/lib/utils';
 import type { ScreenState, UserProfile } from '../GamedayFlow';
 
@@ -209,24 +210,7 @@ export default function Quests({
         )}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-28 glass-nav flex items-center justify-around px-4 pb-8 z-30">
-        <button onClick={() => onNavClick('dashboard')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Home size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Daily</span>
-        </button>
-        <button onClick={() => onNavClick('drills_library')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Dumbbell size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Drills</span>
-        </button>
-        <button onClick={() => onNavClick('quests')} className="flex flex-col items-center gap-2 text-white transition-colors">
-          <div className="h-1 w-8 bg-primary rounded-full mb-1" />
-          <Zap size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Bonus</span>
-        </button>
-        <button onClick={() => onNavClick('food_tracker')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <Camera size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Scan</span>
-        </button>
-        <button onClick={() => onNavClick('stats')} className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors">
-          <BarChart2 size={20} /> <span className="text-[8px] font-bold uppercase tracking-[0.1em]">Stats</span>
-        </button>
-      </div>
+      <NavBar active="quests" onNavClick={onNavClick} />
     </div>
   );
 }
