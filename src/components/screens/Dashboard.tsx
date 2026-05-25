@@ -478,13 +478,64 @@ export default function Dashboard({
     return dayOfYear % CHALLENGES.length;
   }, []);
   const todayChallenge = CHALLENGES[todayChallengeIdx];
-  const challengeKey = `gameday_challenge_done_${profile.uid}_${new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })}`;
-  const [challengeDone, setChallengeDone] = useState(() => {
-    try { return !!localStorage.getItem(challengeKey); } catch { return false; }
+  const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+  const challengeAcceptedKey = `gameday_challenge_accepted_${profile.uid}_${todayDate}`;
+  const challengeDoneKey     = `gameday_challenge_done_${profile.uid}_${todayDate}`;
+
+  const [challengeAccepted, setChallengeAccepted] = useState(() => {
+    try { return !!localStorage.getItem(challengeAcceptedKey); } catch { return false; }
   });
-  const acceptChallenge = () => {
-    try { localStorage.setItem(challengeKey, '1'); } catch {}
+  const [challengeDone, setChallengeDone] = useState(() => {
+    try { return !!localStorage.getItem(challengeDoneKey); } catch { return false; }
+  });
+  const [challengeStreak, setChallengeStreak] = useState(() => {
+    try {
+      const raw = localStorage.getItem(`gameday_challenge_streak_${profile.uid}`);
+      return raw ? (JSON.parse(raw).count as number) : 0;
+    } catch { return 0; }
+  });
+  const [timeUntilReset, setTimeUntilReset] = useState('');
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+      const diff = tomorrow.getTime() - now.getTime();
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setTimeUntilReset(`${h}h ${m}m`);
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const lockInChallenge = () => {
+    try { localStorage.setItem(challengeAcceptedKey, '1'); } catch {}
+    setChallengeAccepted(true);
+  };
+
+  const completeChallengeAction = () => {
+    try { localStorage.setItem(challengeDoneKey, '1'); } catch {}
+    const newCount = (() => {
+      try {
+        const raw = localStorage.getItem(`gameday_challenge_streak_${profile.uid}`);
+        const prev = raw ? JSON.parse(raw) : { count: 0, lastDate: '' };
+        let count = 1;
+        if (prev.lastDate) {
+          const diffDays = Math.round(
+            (new Date(todayDate + 'T12:00:00').getTime() - new Date(prev.lastDate + 'T12:00:00').getTime())
+            / (1000 * 60 * 60 * 24)
+          );
+          if (diffDays === 1) count = prev.count + 1;
+          else if (diffDays === 0) count = prev.count;
+        }
+        localStorage.setItem(`gameday_challenge_streak_${profile.uid}`, JSON.stringify({ count, lastDate: todayDate }));
+        return count;
+      } catch { return 1; }
+    })();
+    setChallengeStreak(newCount);
     setChallengeDone(true);
+    onComplete(todayChallenge.id, 'challenge');
   };
 
   const rival = useMemo(() => {
@@ -672,37 +723,103 @@ export default function Dashboard({
         )}
 
         {/* Daily Challenge */}
-        <div className={cn(
-          "px-4 py-4 rounded-2xl border transition-all",
-          challengeDone ? "bg-emerald-500/5 border-emerald-500/20" : "bg-white/3 border-white/6"
-        )}>
-          <div className="flex items-start gap-3">
-            <div className={cn(
-              "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
-              challengeDone ? "bg-emerald-500/15" : "bg-primary/10"
-            )}>
-              {challengeDone ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Zap size={16} className="text-primary" />}
+        {(() => {
+          const diffLabel = todayChallenge.xp >= 150 ? 'Hard' : todayChallenge.xp >= 100 ? 'Medium' : 'Easy';
+          const diffStyle = todayChallenge.xp >= 150
+            ? 'text-red-400 bg-red-500/10 border-red-500/20'
+            : todayChallenge.xp >= 100
+            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+            : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+
+          if (challengeDone) return (
+            <div className="rounded-3xl bg-emerald-500/5 border border-emerald-500/20 overflow-hidden animate-in fade-in duration-500">
+              <div className="px-5 py-5 space-y-3.5">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={20} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-emerald-400/60 mb-0.5">Challenge Complete</p>
+                    <h4 className="text-xl font-headline font-black uppercase tracking-tight text-white leading-tight">{todayChallenge.title}</h4>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 shrink-0 mt-1">+{todayChallenge.xp} XP</span>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-emerald-500/10">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">
+                    🔥 {challengeStreak} day{challengeStreak !== 1 ? 's' : ''} in a row
+                  </span>
+                  {challengeStreak < 7 ? (
+                    <span className="text-[8px] font-bold text-white/25">{7 - challengeStreak} more → 500 XP bonus</span>
+                  ) : (
+                    <span className="text-[8px] font-black uppercase tracking-widest text-yellow-400">🏆 Elite level</span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/25 mb-0.5">Daily Challenge</p>
-              <p className={cn("text-[12px] font-black uppercase tracking-tight", challengeDone ? "text-emerald-400" : "text-white")}>
-                {todayChallenge.title}
-              </p>
-              <p className="text-[9px] text-white/40 font-medium mt-0.5 leading-snug">{todayChallenge.desc}</p>
+          );
+
+          if (challengeAccepted) return (
+            <div className="rounded-3xl bg-primary/5 border border-primary/25 overflow-hidden">
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-primary/50">Locked In</span>
+                    <span className={cn("text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border", diffStyle)}>
+                      {diffLabel}
+                    </span>
+                  </div>
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Resets in {timeUntilReset}</span>
+                </div>
+                <h4 className="text-2xl font-headline font-black uppercase tracking-tight text-white leading-tight mb-1.5">
+                  {todayChallenge.title}
+                </h4>
+                <p className="text-[11px] text-white/50 font-medium leading-relaxed">{todayChallenge.desc}</p>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/25">{todayChallenge.cat}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-primary">+{todayChallenge.xp} XP on completion</span>
+                </div>
+              </div>
+              <button
+                onClick={completeChallengeAction}
+                className="w-full py-3.5 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:opacity-80 transition-all"
+              >
+                <CheckCircle2 size={13} /> Mark Done
+              </button>
             </div>
-            <div className="shrink-0 text-right">
-              <span className="text-[8px] font-black uppercase tracking-widest text-primary">+{todayChallenge.xp} XP</span>
-              {!challengeDone && (
-                <button
-                  onClick={acceptChallenge}
-                  className="mt-1.5 block text-[7px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-primary text-primary-foreground active:scale-95 transition-all"
-                >
-                  Accept
-                </button>
-              )}
+          );
+
+          return (
+            <div className="rounded-3xl bg-white/5 border border-white/8 overflow-hidden">
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/25">Daily Challenge</span>
+                    <span className={cn("text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border", diffStyle)}>
+                      {diffLabel}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-primary">+{todayChallenge.xp} XP</span>
+                </div>
+                <h4 className="text-2xl font-headline font-black uppercase tracking-tight text-white leading-tight mb-1.5">
+                  {todayChallenge.title}
+                </h4>
+                <p className="text-[11px] text-white/50 font-medium leading-relaxed">{todayChallenge.desc}</p>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/25">{todayChallenge.cat}</span>
+                  {challengeStreak > 0 && (
+                    <span className="text-[8px] font-black uppercase tracking-widest text-orange-400">🔥 {challengeStreak}d streak</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={lockInChallenge}
+                className="w-full py-3.5 bg-white/5 border-t border-white/8 text-[10px] font-black uppercase tracking-widest text-white/50 flex items-center justify-center gap-2 hover:bg-white/8 active:scale-[0.99] transition-all"
+              >
+                <Swords size={12} /> Lock In
+              </button>
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Next game */}
         {nextGame && (() => {

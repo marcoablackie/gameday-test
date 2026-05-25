@@ -594,7 +594,13 @@ export default function GamedayFlow() {
           profile={effectiveProfile}
           onActivityClick={handleActivityClick}
           onNavClick={setCurrentScreen}
-          onComplete={(id, type) => awardXP(type === 'training' ? 50 : 25, id)}
+          onComplete={(id, type) => {
+            const CHALLENGE_XP: Record<string, number> = {
+              c1: 150, c2: 100, c3: 150, c4: 100, c5: 150, c6: 75,
+              c7: 75,  c8: 100, c9: 100, c10: 100, c11: 100, c12: 75, c13: 75, c14: 100,
+            };
+            awardXP(type === 'training' ? 50 : type === 'challenge' ? (CHALLENGE_XP[id] ?? 100) : 25, id);
+          }}
           onSkip={skipActivity}
           onLogMeal={logMealStats}
         />
